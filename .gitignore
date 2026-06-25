@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.pyo
+.agents/subagent/outputs/
+.agents/subagent/locks/
+.agents/subagent/agents.json
+.DS_Store
