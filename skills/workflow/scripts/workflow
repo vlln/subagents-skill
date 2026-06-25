@@ -18,9 +18,15 @@ _script_dir = Path(__file__).resolve().parent
 _lib_dir = _script_dir / "lib"
 sys.path.insert(0, str(_lib_dir))
 
+# Also add subagents lib for registry/lock access
+_subagents_lib = _script_dir.parent.parent / "subagents" / "scripts" / "lib"
+sys.path.insert(0, str(_subagents_lib / "backends"))
+sys.path.insert(0, str(_subagents_lib / "transports"))
+sys.path.insert(0, str(_subagents_lib))
+
 from runtime import (  # noqa: E402
     agent, parallel, pipeline, phase, log, workflow,
-    set_context,
+    set_context, _outputs_dir,
 )
 
 
@@ -123,11 +129,135 @@ def cmd_resume(args: list[str]) -> None:
 
 
 def cmd_list(args: list[str]) -> None:
-    print("Workflows: (list sessions via subagents list)", file=sys.stderr)
+    """List all workflow runs with their sessions."""
+    import registry as reg
+    output_json = False
+    if "--output" in args:
+        idx = args.index("--output")
+        if idx + 1 < len(args) and args[idx + 1] == "json":
+            output_json = True
+
+    runs = _collect_workflow_runs(reg)
+    if not runs:
+        if output_json:
+            print(json.dumps({"runs": []}))
+        else:
+            print("No workflow runs found.", file=sys.stderr)
+        return
+
+    if output_json:
+        print(json.dumps({"runs": runs}, indent=2))
+        return
+
+    for run in runs:
+        print(f"Run: {run['run_id']}", file=sys.stderr)
+        for s in run["sessions"]:
+            status = s["status"]
+            prompt = s.get("prompt", "")[:60]
+            mark = "✓" if status == "done" else "✗" if status in ("failed", "crashed") else "…"
+            print(f"  {mark} {s['name']}  [{status}]  {prompt}", file=sys.stderr)
 
 
 def cmd_status(args: list[str]) -> None:
-    print("Status: (use subagents status <session>)", file=sys.stderr)
+    """Show status of a specific workflow run."""
+    if not args:
+        print("Error: workflow status <run_id>", file=sys.stderr)
+        sys.exit(1)
+
+    run_id = args[0]
+    import registry as reg
+    runs = _collect_workflow_runs(reg)
+    run = next((r for r in runs if r["run_id"] == run_id), None)
+
+    if not run:
+        print(f"Run '{run_id}' not found.", file=sys.stderr)
+        sys.exit(1)
+
+    sessions = run["sessions"]
+    done = sum(1 for s in sessions if s["status"] == "done")
+    running = sum(1 for s in sessions if s["status"] == "running")
+    failed = sum(1 for s in sessions if s["status"] in ("failed", "crashed"))
+
+    print(f"Run: {run_id}", file=sys.stderr)
+    print(f"Sessions: {done} done, {running} running, {failed} failed (total {len(sessions)})", file=sys.stderr)
+    print(file=sys.stderr)
+
+    for s in sessions:
+        status = s["status"]
+        mark = "✓" if status == "done" else "✗" if status in ("failed", "crashed") else "…"
+        print(f"  {mark} {s['name']}  [{status}]  {s.get('prompt', '')[:80]}", file=sys.stderr)
+
+
+def cmd_stop(args: list[str]) -> None:
+    """Stop all running sessions in a workflow run."""
+    if not args:
+        print("Error: workflow stop <run_id>", file=sys.stderr)
+        sys.exit(1)
+
+    run_id = args[0]
+    import registry as reg
+    import lock as lock_mod
+
+    runs = _collect_workflow_runs(reg)
+    run = next((r for r in runs if r["run_id"] == run_id), None)
+
+    if not run:
+        print(f"Run '{run_id}' not found.", file=sys.stderr)
+        sys.exit(1)
+
+    stopped = 0
+    for s in run["sessions"]:
+        if s["status"] != "running":
+            continue
+        # Kill the background process via pid file
+        pid_file = Path(_outputs_dir()).parent / f"{s['name']}.pid"
+        if pid_file.is_file():
+            try:
+                pid = int(pid_file.read_text().strip())
+                os.kill(pid, 9)  # SIGKILL
+                stopped += 1
+                print(f"  Stopped {s['name']} (pid {pid})", file=sys.stderr)
+            except (OSError, ValueError):
+                pass
+        # Release lock
+        lock_path = Path(_outputs_dir()).parent / "locks" / f"{s['name']}.lock"
+        if lock_path.exists():
+            lock_mod.release(lock_path)
+
+    if stopped == 0:
+        print(f"No running sessions in run '{run_id}'.", file=sys.stderr)
+    else:
+        print(f"Stopped {stopped} session(s) in run '{run_id}'.", file=sys.stderr)
+
+
+def _collect_workflow_runs(reg) -> list[dict]:
+    """Collect all workflow runs from the registry, grouped by run_id."""
+    data = reg.get_all_data()
+    sessions_by_run: dict[str, list[dict]] = {}
+
+    for agent_name, agent_data in data.items():
+        for session_name, session_data in agent_data.get("sessions", {}).items():
+            if not session_name.startswith("wf_"):
+                continue
+            # Extract run_id: wf_<run_id>_<seq>
+            parts = session_name.rsplit("_", 1)
+            if len(parts) != 2:
+                continue
+            run_id = parts[0][3:]  # strip "wf_" prefix
+            status = reg.get_session_status(agent_name, session_name)
+            tasks = session_data.get("tasks", [])
+            prompt = tasks[-1]["prompt"] if tasks else ""
+            sessions_by_run.setdefault(run_id, []).append({
+                "name": session_name,
+                "status": status,
+                "prompt": prompt,
+            })
+
+    runs: list[dict] = []
+    for run_id, sessions in sorted(sessions_by_run.items()):
+        sessions.sort(key=lambda s: s["name"])
+        runs.append({"run_id": run_id, "sessions": sessions})
+    return runs
 
 
 def main() -> None:
@@ -136,8 +266,9 @@ def main() -> None:
         print("Usage: workflow <command> [args...]", file=sys.stderr)
         print("  workflow run <script.py> [--args '<json>'] [--resume <run_id>]", file=sys.stderr)
         print("  workflow resume <run_id> <script.py> [--args '<json>']", file=sys.stderr)
-        print("  workflow list", file=sys.stderr)
-        print("  workflow status <run-id>", file=sys.stderr)
+        print("  workflow list [--output json]", file=sys.stderr)
+        print("  workflow status <run_id>", file=sys.stderr)
+        print("  workflow stop <run_id>", file=sys.stderr)
         sys.exit(1)
 
     cmd = args.pop(0)
@@ -149,6 +280,8 @@ def main() -> None:
         cmd_list(args)
     elif cmd == "status":
         cmd_status(args)
+    elif cmd == "stop":
+        cmd_stop(args)
     else:
         print(f"Unknown command: {cmd}", file=sys.stderr)
         sys.exit(1)
