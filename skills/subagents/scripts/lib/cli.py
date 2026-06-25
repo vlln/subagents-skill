@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from agent import list_agents, parse_agent
 from backends.claude import ClaudeBackend
 from backends.codex import CodexBackend
+from backends.gemini import GeminiBackend
 from backends.kimi import KimiBackend
 from backends.kiro import KiroBackend
 from backends.opencode import OpencodeBackend
@@ -42,12 +43,13 @@ BACKEND_MAP: dict[str, type[BaseBackend]] = {
     "kiro":     KiroBackend,
     "opencode": OpencodeBackend,
     "qwen":     QwenBackend,
+    "gemini":   GeminiBackend,
 }
 
 
 def _detect_backend() -> str:
     import shutil
-    for name in ["kimi", "kiro-cli", "claude", "codex", "pi"]:
+    for name in ["kimi", "kiro-cli", "claude", "codex", "pi", "gemini"]:
         if shutil.which(name):
             return "kiro" if name == "kiro-cli" else name
     return "kimi"

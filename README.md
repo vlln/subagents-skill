@@ -2,7 +2,7 @@
 
 Agent Skills for dispatching tasks to AI coding agents across multiple backends.
 
-- **One interface, seven backends.** kimi, claude, codex, pi, opencode, qwen, and kiro — same `subagents run` command for all.
+- **One interface, eight backends.** kimi, claude, codex, pi, opencode, qwen, kiro, and gemini — same `subagents run` command for all.
 - **Sessions persist.** Each run creates a named session. Resume it later and the agent remembers all prior context.
 - **Parallel swarms.** Run multiple agents in background with `--bg`, wait for all to finish with `subagents wait`.
 - **Auto-detection.** Backend and transport (CLI or [ACP](https://agentclientprotocol.com)) are auto-detected. Override with `--backend` and `--transport`.
@@ -19,6 +19,7 @@ Agent Skills for dispatching tasks to AI coding agents across multiple backends.
 | `opencode` | `opencode` | CLI, ACP | inline | Tested |
 | `qwen` | `qwen` | CLI, ACP | native (append + overwrite) | Tested |
 | `kiro` | `kiro-cli` | CLI, ACP | inline | Untested |
+| `gemini` | `gemini` | CLI, ACP | inline | Untested |
 
 Backend and transport are auto-detected. Override with `--backend <name>` and `--transport cli|acp`.
 Use `--system-mode append` (default) or `--system-mode overwrite` to control how the agent's system prompt is applied.

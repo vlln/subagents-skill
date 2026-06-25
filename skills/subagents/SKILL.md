@@ -85,6 +85,7 @@ First run creates the session; subsequent runs with the same session name resume
 | `opencode` | `opencode` | CLI, ACP | inline | |
 | `qwen` | `qwen` | CLI, ACP | native (append + overwrite) | |
 | `kiro` | `kiro-cli` | CLI, ACP | inline | |
+| `gemini` | `gemini` | CLI, ACP | inline | |
 
 ## Rules
 

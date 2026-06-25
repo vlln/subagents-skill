@@ -1,0 +1,18 @@
+{
+  "r1": {
+    "sessions": {
+      "r1": {
+        "session_id": "session_e1c6a832-84d8-4040-8315-1aea9cc6335c",
+        "status": "done",
+        "created": "2026-06-25T06:28:15.983908+00:00",
+        "tasks": [
+          {
+            "prompt": "hi",
+            "status": "done",
+            "time": "2026-06-25T06:28:15.984624+00:00"
+          }
+        ]
+      }
+    }
+  }
+}
