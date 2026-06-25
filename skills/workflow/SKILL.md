@@ -27,9 +27,24 @@ metadata:
 
 Use `scripts/workflow` to orchestrate multiple AI agents in parallel or pipeline patterns.
 
+**Quick start:**
+
+```bash
+# 1. Agent writes the script
+cat > .agents/workflow/hello.py << 'EOF'
+meta = {"name": "hello", "description": "Simple workflow"}
+def run(agent, parallel, pipeline, phase, log, args, workflow):
+    phase("Greet")
+    return {"result": agent("say hello")}
+EOF
+
+# 2. Agent executes it
+scripts/workflow run .agents/workflow/hello.py
+```
+
 ## Dependencies
 
-Requires the [subagents](../subagents/SKILL.md) skill. Set `SKILL_SUBAGENTS_HOME` to its installation path.
+Requires the [subagents](https://github.com/vlln/subagents-skill/blob/main/skills/subagents/SKILL.md) skill. Set `SKILL_SUBAGENTS_HOME` to its installation path.
 
 ## When To Use
 
@@ -38,6 +53,52 @@ Requires the [subagents](../subagents/SKILL.md) skill. Set `SKILL_SUBAGENTS_HOME
 - Fan-out analysis across dimensions (security, performance, style) then synthesize.
 - Discover work items dynamically, then process them in batches.
 - Adversarial verify: generate → review → refine cycles.
+
+## How To Use
+
+### 1. Write the script
+
+The agent writes the workflow script to a file. Use `.agents/workflow/` for project-scoped scripts or `/tmp/` for one-off runs.
+
+```python
+# .agents/workflow/code-review.py
+meta = {"name": "code-review", "description": "..."}
+
+def run(agent, parallel, pipeline, phase, log, args, workflow):
+    ...
+```
+
+### 2. Execute
+
+```bash
+scripts/workflow run .agents/workflow/code-review.py
+```
+
+With arguments:
+
+```bash
+scripts/workflow run .agents/workflow/code-review.py --args '{"target": "src/"}'
+```
+
+### 3. Resume on failure
+
+If the workflow crashes (timeout, agent failure), re-run with the same `--resume` ID. Completed sessions are skipped.
+
+```bash
+# First run
+scripts/workflow run script.py --resume myrun001
+
+# Crash... resume:
+scripts/workflow resume myrun001 script.py
+```
+
+### 4. Check results
+
+`run()` returns a dict which is printed as JSON to stdout. Diagnostics go to stderr.
+
+```json
+{"status": "complete", "findings": 3, "summary": "..."}
+```
 
 ## Workflow Script
 
