@@ -6,19 +6,25 @@ from cli_backend import CliBackend
 
 
 class ClaudeBackend(CliBackend):
-    def _cmd_create(self, user: str, system: str | None, model: str | None) -> list[str]:
+    def _cmd_create(self, user: str, system: str | None, model: str | None, system_mode: str) -> list[str]:
         cmd = ["claude", "-p", "--output-format", "stream-json", "--verbose", "--permission-mode", "bypassPermissions"]
         if system:
-            cmd.extend(["--system-prompt", system])
+            if system_mode == "overwrite":
+                cmd.extend(["--system-prompt", system])
+            else:
+                cmd.extend(["--append-system-prompt", system])
         cmd.append(user)
         if model:
             cmd.extend(["--model", model])
         return cmd
 
-    def _cmd_resume(self, sid: str, user: str, system: str | None, model: str | None) -> list[str]:
+    def _cmd_resume(self, sid: str, user: str, system: str | None, model: str | None, system_mode: str) -> list[str]:
         cmd = ["claude", "-p", "--output-format", "stream-json", "--verbose", "--resume", sid, "--permission-mode", "bypassPermissions"]
         if system:
-            cmd.extend(["--system-prompt", system])
+            if system_mode == "overwrite":
+                cmd.extend(["--system-prompt", system])
+            else:
+                cmd.extend(["--append-system-prompt", system])
         cmd.append(user)
         if model:
             cmd.extend(["--model", model])

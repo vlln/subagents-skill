@@ -10,17 +10,18 @@ Agent Skills for dispatching tasks to AI coding agents across multiple backends.
 
 ## Supported Backends
 
-| Backend | Command | Transports | Status |
-|---------|---------|-----------|--------|
-| `kimi` | `kimi` | CLI, ACP | Tested |
-| `claude` | `claude` | CLI | Tested |
-| `codex` | `codex` | CLI | Tested |
-| `pi` | `pi` | CLI | Tested |
-| `opencode` | `opencode` | CLI, ACP | Tested |
-| `qwen` | `qwen` | CLI, ACP | Tested |
-| `kiro` | `kiro-cli` | CLI, ACP | Untested |
+| Backend | Command | Transports | System Prompt | Status |
+|---------|---------|-----------|---------------|--------|
+| `kimi` | `kimi` | CLI, ACP | inline | Tested |
+| `claude` | `claude` | CLI | native (append + overwrite) | Tested |
+| `codex` | `codex` | CLI | inline | Tested |
+| `pi` | `pi` | CLI | native (append + overwrite) | Tested |
+| `opencode` | `opencode` | CLI, ACP | inline | Tested |
+| `qwen` | `qwen` | CLI, ACP | native (append + overwrite) | Tested |
+| `kiro` | `kiro-cli` | CLI, ACP | inline | Untested |
 
 Backend and transport are auto-detected. Override with `--backend <name>` and `--transport cli|acp`.
+Use `--system-mode append` (default) or `--system-mode overwrite` to control how the agent's system prompt is applied.
 
 These skills follow the [Agent Skills specification](https://agentskills.io/specification) so they can be used by any skills-compatible agent, including Claude Code, Codex, and Open Code.
 

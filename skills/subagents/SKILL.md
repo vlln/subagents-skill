@@ -48,17 +48,21 @@ You are a code reviewer. Analyze code for correctness, security, and best practi
 
 ```bash
 # Create or resume a session
-scripts/subagentss run <agent> <session> <prompt>
-scripts/subagentss run <session> <prompt>                      # resume only, no agent
+scripts/subagents run <agent> <session> <prompt>
+scripts/subagents run <session> <prompt>                      # resume only, no agent
 
-# Background execution (returns immediately, output to .agents/subagents/outputs/)
-scripts/subagentss run --bg <agent> <session> <prompt>
-scripts/subagentss wait <session>                               # block until done
+# System prompt mode (default: append)
+scripts/subagents run --system-mode overwrite <agent> <session> <prompt>
+scripts/subagents run --system-mode append <agent> <session> <prompt>
+
+# Background execution (returns immediately, output to .agents/subagent/outputs/)
+scripts/subagents run --bg <agent> <session> <prompt>
+scripts/subagents wait <session>                               # block until done
 
 # Monitor
-scripts/subagentss list                                         # all agents and sessions
-scripts/subagentss status <agent>                               # one agent's sessions
-scripts/subagentss status <agent> <session>                     # session details + task history
+scripts/subagents list                                         # all agents and sessions
+scripts/subagents status <agent>                               # one agent's sessions
+scripts/subagents status <agent> <session>                     # session details + task history
 ```
 
 First run creates the session; subsequent runs with the same session name resume it, preserving all prior context.
@@ -67,15 +71,20 @@ First run creates the session; subsequent runs with the same session name resume
 
 `--backend <name>` selects the provider. Auto-detected if omitted. `--transport cli|acp` forces transport mode for backends that support both.
 
-| Backend | Command | Transports | Notes |
-|---------|---------|-----------|-------|
-| `kimi` | `kimi` | CLI, ACP | |
-| `claude` | `claude` | CLI | |
-| `codex` | `codex` | CLI | |
-| `pi` | `pi` | CLI | |
-| `opencode` | `opencode` | CLI, ACP | |
-| `qwen` | `qwen` | CLI, ACP | |
-| `kiro` | `kiro-cli` | CLI, ACP | |
+`--system-mode append|overwrite` controls how the agent's system prompt is handled:
+
+- **append** (default): The agent body is appended to the backend's default system prompt. Backends that support `--append-system-prompt` (claude, pi, qwen) use it natively; others prepend to the user prompt.
+- **overwrite**: The agent body replaces the backend's default system prompt. Backends that support `--system-prompt` (claude, pi, qwen) use it natively; others prepend to the user prompt.
+
+| Backend | Command | Transports | System Prompt | Notes |
+|---------|---------|-----------|---------------|-------|
+| `kimi` | `kimi` | CLI, ACP | inline | |
+| `claude` | `claude` | CLI | native (append + overwrite) | |
+| `codex` | `codex` | CLI | inline | |
+| `pi` | `pi` | CLI | native (append + overwrite) | |
+| `opencode` | `opencode` | CLI, ACP | inline | |
+| `qwen` | `qwen` | CLI, ACP | native (append + overwrite) | |
+| `kiro` | `kiro-cli` | CLI, ACP | inline | |
 
 ## Rules
 
@@ -90,18 +99,18 @@ First run creates the session; subsequent runs with the same session name resume
 Parallel swarm:
 
 ```bash
-scripts/subagentss run --bg reviewer r1 "Review src/auth.ts"
-scripts/subagentss run --bg reviewer r2 "Review src/db.ts"
-scripts/subagentss run --bg reviewer r3 "Review src/api.ts"
-scripts/subagentss wait r1
-scripts/subagentss wait r2
-scripts/subagentss wait r3
+scripts/subagents run --bg reviewer r1 "Review src/auth.ts"
+scripts/subagents run --bg reviewer r2 "Review src/db.ts"
+scripts/subagents run --bg reviewer r3 "Review src/api.ts"
+scripts/subagents wait r1
+scripts/subagents wait r2
+scripts/subagents wait r3
 ```
 
 Context accumulation:
 
 ```bash
-scripts/subagentss run architect design "Design the architecture"
-scripts/subagentss run architect design "Add a caching layer"
-scripts/subagentss run architect design "Handle error recovery"
+scripts/subagents run architect design "Design the architecture"
+scripts/subagents run architect design "Add a caching layer"
+scripts/subagents run architect design "Handle error recovery"
 ```

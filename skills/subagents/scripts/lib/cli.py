@@ -31,7 +31,7 @@ from registry import (
 if TYPE_CHECKING:
     from backends.base import BaseBackend
 
-AGENTS_DIR = os.environ.get("SU BAGENT_AGENTS_DIR", ".agents/subagent")
+AGENTS_DIR = os.environ.get("SUBAGENT_AGENTS_DIR", ".agents/subagent")
 OUTPUT_DIR = os.path.join(AGENTS_DIR, "outputs")
 
 BACKEND_MAP: dict[str, type[BaseBackend]] = {
@@ -71,12 +71,13 @@ def cmd_run(args: list[str]) -> None:
     """Run a task on an agent session.
 
     Usage:
-        subagents run [--bg] [--backend <name>] [--transport <mode>] <agent> <session> <prompt>
+        subagents run [--bg] [--backend <name>] [--transport <mode>] [--system-mode <mode>] <agent> <session> <prompt>
         subagents run [--bg] <session> <prompt>                      # resume only
     """
     bg = False
     backend_override: str | None = None
     transport: str | None = None
+    system_mode = "append"
 
     while args and args[0].startswith("--"):
         flag = args.pop(0)
@@ -88,6 +89,10 @@ def cmd_run(args: list[str]) -> None:
             transport = args.pop(0) if args else _fail("--transport requires a value")
             if transport not in ("cli", "acp"):
                 _fail(f"--transport must be 'cli' or 'acp', got '{transport}'")
+        elif flag == "--system-mode":
+            system_mode = args.pop(0) if args else _fail("--system-mode requires a value")
+            if system_mode not in ("append", "overwrite"):
+                _fail(f"--system-mode must be 'append' or 'overwrite', got '{system_mode}'")
         else:
             _fail(f"unknown flag {flag}")
 
@@ -103,7 +108,7 @@ def cmd_run(args: list[str]) -> None:
         task = " ".join(args) if args else ""
         if not session_name or not task:
             _fail("Usage: subagentss run [--bg] <agent> <session> <prompt>")
-        _run_with_agent(agent_name, session_name, task, bg, backend_override, transport)
+        _run_with_agent(agent_name, session_name, task, bg, backend_override, transport, system_mode)
     else:
         session_name = args.pop(0)
         task = " ".join(args) if args else ""
@@ -124,6 +129,7 @@ def _run_with_agent(
     bg: bool,
     backend_override: str | None,
     transport: str | None,
+    system_mode: str,
 ) -> None:
     agent = parse_agent(Path(AGENTS_DIR) / f"{agent_name}.md")
 
@@ -142,10 +148,10 @@ def _run_with_agent(
             existing_sid = get_session_id(agent_name, session_name)
             if existing_sid:
                 print(f"[subagents] Resuming existing session (id: {existing_sid})...", file=sys.stderr)
-                exit_code = backend.resume_session(existing_sid, task, agent.body or None, agent.model)
+                exit_code = backend.resume_session(existing_sid, task, agent.body or None, system_mode=system_mode)
             else:
                 print("[subagents] Creating new session...", file=sys.stderr)
-                sid, exit_code = backend.create_session(task, agent.body or None, agent.model)
+                sid, exit_code = backend.create_session(task, agent.body or None, system_mode=system_mode)
                 register(agent_name, session_name, sid)
                 print(f"[subagents] Session registered: {agent_name}/{session_name} (id: {sid})", file=sys.stderr)
         finally:
@@ -257,8 +263,6 @@ def cmd_list(args: list[str]) -> None:
         print()
         print(f"  {agent.name}")
         print(f"    description: {agent.description}")
-        if agent.model:
-            print(f"    model: {agent.model}")
         print(f"    definition: {agent.file_path}")
         sessions = list_sessions(agent.name)
         if sessions:
@@ -288,8 +292,6 @@ def cmd_status(args: list[str]) -> None:
     agent = parse_agent(agent_path)
     print(f"Agent: {agent.name}")
     print(f"  description: {agent.description}")
-    if agent.model:
-        print(f"  model: {agent.model}")
     print()
     if session_name:
         sid = get_session_id(agent_name, session_name)
@@ -347,7 +349,7 @@ def _print_help() -> None:
     print("Usage: subagents <command> [args...]", file=sys.stderr)
     print(file=sys.stderr)
     print("Commands:", file=sys.stderr)
-    print("  run [--bg] [--backend <name>] [--transport cli|acp] <agent> <session> <prompt>", file=sys.stderr)
+    print("  run [--bg] [--backend <name>] [--transport cli|acp] [--system-mode append|overwrite] <agent> <session> <prompt>", file=sys.stderr)
     print("  run [--bg] <session> <prompt>", file=sys.stderr)
     print("  wait <session>", file=sys.stderr)
     print("  list", file=sys.stderr)

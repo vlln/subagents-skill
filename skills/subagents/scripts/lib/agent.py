@@ -1,6 +1,6 @@
 """Agent definition parser for .md files with YAML frontmatter."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 
@@ -10,7 +10,7 @@ class AgentDef:
 
     name: str
     description: str
-    body: str = ""       # system prompt, optional
+    body: str = ""       # entire .md file content (including frontmatter), used as system prompt
     file_path: str | None = None
 
 
@@ -22,7 +22,6 @@ def parse_agent(file_path: str | Path) -> AgentDef:
     ---
     name: agent-name
     description: What this agent does
-    model: gpt-5.1       # optional
     ---
     System prompt body...
     ```
@@ -42,7 +41,6 @@ def parse_agent(file_path: str | Path) -> AgentDef:
     frontmatter: dict[str, str] = {}
     in_fm = False
     fm_ended = False
-    body_lines: list[str] = []
 
     for line in lines:
         if line.strip() == "---":
@@ -53,12 +51,9 @@ def parse_agent(file_path: str | Path) -> AgentDef:
                 fm_ended = True
                 continue
         if in_fm and not fm_ended:
-            # Parse "key: value" or "key:value"
             if ":" in line:
                 key, _, value = line.partition(":")
                 frontmatter[key.strip()] = value.strip().strip('"').strip("'")
-        elif fm_ended:
-            body_lines.append(line)
 
     if not frontmatter:
         raise ValueError(f"No YAML frontmatter found in {file_path}")
@@ -71,12 +66,11 @@ def parse_agent(file_path: str | Path) -> AgentDef:
     if not description:
         raise ValueError(f"'description' is required in frontmatter of {file_path}")
 
-    body = "\n".join(body_lines).strip()
+    body = content.strip()
 
     return AgentDef(
         name=name,
         description=description,
-        model=model,
         body=body,
         file_path=str(path),
     )

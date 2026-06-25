@@ -2,7 +2,7 @@
 """subagent — Dispatch tasks to named agent sessions.
 
 Usage:
-    subagent run [--bg] [--backend <name>] <agent> <session> <prompt>
+    subagent run [--bg] [--backend <name>] [--transport <mode>] [--system-mode <mode>] <agent> <session> <prompt>
     subagent run [--bg] <session> <prompt>
     subagent wait <session>
     subagent list

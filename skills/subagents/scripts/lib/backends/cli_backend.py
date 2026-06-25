@@ -15,8 +15,8 @@ class CliBackend(BaseBackend):
     """Base for CLI backends. Subclass defines commands and line parsing.
 
     Subclasses must implement:
-      - _cmd_create(user, system, model) → list[str]
-      - _cmd_resume(sid, user, system, model) → list[str]
+      - _cmd_create(user, system, model, system_mode) → list[str]
+      - _cmd_resume(sid, user, system, model, system_mode) → list[str]
       - _parse_line(line) → (text | None, session_id | None)
 
     Set _sid_on_stderr = True if the session_id appears on stderr.
@@ -28,16 +28,16 @@ class CliBackend(BaseBackend):
         self._transport = CliTransport()
 
     @abstractmethod
-    def _cmd_create(self, user: str, system: str | None, model: str | None) -> list[str]: ...
+    def _cmd_create(self, user: str, system: str | None, model: str | None, system_mode: str) -> list[str]: ...
 
     @abstractmethod
-    def _cmd_resume(self, sid: str, user: str, system: str | None, model: str | None) -> list[str]: ...
+    def _cmd_resume(self, sid: str, user: str, system: str | None, model: str | None, system_mode: str) -> list[str]: ...
 
     @abstractmethod
     def _parse_line(self, line: str) -> tuple[str | None, str | None]: ...
 
-    def create_session(self, user: str, system: str | None = None, model: str | None = None) -> tuple[str, int]:
-        cmd = self._cmd_create(user, system, model)
+    def create_session(self, user: str, system: str | None = None, model: str | None = None, system_mode: str = "append") -> tuple[str, int]:
+        cmd = self._cmd_create(user, system, model, system_mode)
         sid: str = ""
 
         if self._sid_on_stderr:
@@ -56,8 +56,8 @@ class CliBackend(BaseBackend):
         print()
         return (sid or f"unknown-{int(time.time_ns())}", ec)
 
-    def resume_session(self, session_id: str, user: str, system: str | None = None, model: str | None = None) -> int:
-        cmd = self._cmd_resume(session_id, user, system, model)
+    def resume_session(self, session_id: str, user: str, system: str | None = None, model: str | None = None, system_mode: str = "append") -> int:
+        cmd = self._cmd_resume(session_id, user, system, model, system_mode)
 
         if self._sid_on_stderr:
             ec = self._transport.run(cmd, on_stderr=lambda _: None)

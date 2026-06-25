@@ -6,14 +6,14 @@ from cli_backend import CliBackend
 
 
 class CodexBackend(CliBackend):
-    def _cmd_create(self, user: str, system: str | None, model: str | None) -> list[str]:
+    def _cmd_create(self, user: str, system: str | None, model: str | None, system_mode: str) -> list[str]:
         prompt = f"System: {system}\n\nTask: {user}" if system else user
         cmd = ["codex", "exec", "--json", "--dangerously-bypass-approvals-and-sandbox", prompt]
         if model:
             cmd.extend(["-m", model])
         return cmd
 
-    def _cmd_resume(self, sid: str, user: str, system: str | None, model: str | None) -> list[str]:
+    def _cmd_resume(self, sid: str, user: str, system: str | None, model: str | None, system_mode: str) -> list[str]:
         cmd = ["codex", "exec", "resume", "--json", "--dangerously-bypass-approvals-and-sandbox", sid, user]
         if model:
             cmd.extend(["-m", model])

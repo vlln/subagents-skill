@@ -31,7 +31,7 @@ class AcpBackend(BaseBackend):
                 sys.stdout.flush()
 
     def create_session(
-        self, user: str, system: str | None = None, model: str | None = None
+        self, user: str, system: str | None = None, model: str | None = None, system_mode: str = "append"
     ) -> tuple[str, int]:
         self._transport.start()
         r = self._transport.call("session/new", {"cwd": str(Path.cwd()), "mcpServers": []})
@@ -51,7 +51,7 @@ class AcpBackend(BaseBackend):
             return sid, 1
 
     def resume_session(
-        self, session_id: str, user: str, system: str | None = None, model: str | None = None
+        self, session_id: str, user: str, system: str | None = None, model: str | None = None, system_mode: str = "append"
     ) -> int:
         self._transport.start()
         self._transport.call("session/load", {"sessionId": session_id})
