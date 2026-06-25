@@ -87,6 +87,22 @@ First run creates the session; subsequent runs with the same session name resume
 | `kiro` | `kiro-cli` | CLI, ACP | inline | |
 | `gemini` | `gemini` | CLI, ACP | inline | |
 
+## JSONL Output
+
+Use `--output json` for structured, machine-readable output. Every stream starts with a version event.
+
+```bash
+scripts/subagents run --output json <session> <prompt>
+# {"type":"version","version":1}
+# {"type":"agent_start","session":"s1","agent":null,"backend":"kimi"}
+# {"type":"agent_text","session":"s1","content":"..."}
+# {"type":"agent_done","session":"s1","exit_code":0}
+```
+
+All commands support `--output json`: `run`, `run --bg`, `wait`, `list`, `status`.
+
+See [`references/schema-v1.json`](references/schema-v1.json) for the full JSON Schema.
+
 ## Rules
 
 - Session names are chosen by you. Use descriptive names (`review-auth`, `explore-codebase`).

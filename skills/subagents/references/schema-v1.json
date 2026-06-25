@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/vlln/subagents-skill/schema/v1/events.json",
+  "title": "Subagents JSONL Events — v1",
+  "description": "JSONL event stream schema for `subagents --output json`. Each line is a JSON object with a `type` discriminator.",
+  "oneOf": [
+    { "$ref": "#/$defs/version" },
+    { "$ref": "#/$defs/agent_start" },
+    { "$ref": "#/$defs/agent_text" },
+    { "$ref": "#/$defs/agent_done" },
+    { "$ref": "#/$defs/agent_error" },
+    { "$ref": "#/$defs/agent_list" },
+    { "$ref": "#/$defs/agent_status" }
+  ],
+  "$defs": {
+    "version": {
+      "description": "Always the first event in every JSONL stream. Declares the schema version.",
+      "type": "object",
+      "required": ["type", "version"],
+      "properties": {
+        "type": { "const": "version" },
+        "version": {
+          "type": "integer",
+          "description": "Schema version number. Incremented on breaking changes."
+        }
+      }
+    },
+    "agent_start": {
+      "description": "Emitted when a session begins execution.",
+      "type": "object",
+      "required": ["type", "session", "backend"],
+      "properties": {
+        "type": { "const": "agent_start" },
+        "session": { "type": "string", "description": "Session name." },
+        "agent": { "type": ["string", "null"], "description": "Agent name (from .md file), or null if no agent." },
+        "backend": { "type": "string", "description": "Backend name (kimi, claude, codex, …)." }
+      }
+    },
+    "agent_text": {
+      "description": "Emitted for each chunk of streaming agent output.",
+      "type": "object",
+      "required": ["type", "session", "content"],
+      "properties": {
+        "type": { "const": "agent_text" },
+        "session": { "type": "string" },
+        "content": { "type": "string", "description": "Text chunk from the agent." }
+      }
+    },
+    "agent_done": {
+      "description": "Emitted when a session completes normally.",
+      "type": "object",
+      "required": ["type", "session", "exit_code"],
+      "properties": {
+        "type": { "const": "agent_done" },
+        "session": { "type": "string" },
+        "exit_code": { "type": "integer", "description": "Process exit code. 0 = success." }
+      }
+    },
+    "agent_error": {
+      "description": "Emitted when a session fails or encounters an error.",
+      "type": "object",
+      "required": ["type", "session", "error"],
+      "properties": {
+        "type": { "const": "agent_error" },
+        "session": { "type": "string" },
+        "error": { "type": "string", "description": "Human-readable error message." }
+      }
+    },
+    "agent_list": {
+      "description": "Emitted by `subagents list --output json`.",
+      "type": "object",
+      "required": ["type", "agents"],
+      "properties": {
+        "type": { "const": "agent_list" },
+        "agents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "description"],
+            "properties": {
+              "name": { "type": "string" },
+              "description": { "type": "string" },
+              "sessions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["name", "id", "status"],
+                  "properties": {
+                    "name": { "type": "string" },
+                    "id": { "type": "string" },
+                    "status": {
+                      "type": "string",
+                      "enum": ["running", "done", "crashed", "unknown"]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "agent_status": {
+      "description": "Emitted by `subagents status --output json <agent> [session]`.",
+      "type": "object",
+      "required": ["type", "agent", "status"],
+      "properties": {
+        "type": { "const": "agent_status" },
+        "agent": { "type": "string" },
+        "session": { "type": "string", "description": "Session name, present only when querying a specific session." },
+        "status": { "type": "string", "description": "Overall status (done, running, crashed, unknown, no-sessions, ok)." },
+        "tasks": {
+          "type": "array",
+          "description": "Task history for the session, or session list for agent-level query.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "prompt": { "type": "string" },
+              "status": { "type": "string" },
+              "time": { "type": "string", "format": "date-time" },
+              "name": { "type": "string" },
+              "id": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
