@@ -147,13 +147,13 @@ def _run_with_agent(
         try:
             existing_sid = get_session_id(agent_name, session_name)
             if existing_sid:
-                print(f"[subagents] Resuming existing session (id: {existing_sid})...", file=sys.stderr)
+                print("[subagents] Resuming existing session...", file=sys.stderr)
                 exit_code = backend.resume_session(existing_sid, task, agent.body or None, system_mode=system_mode)
             else:
                 print("[subagents] Creating new session...", file=sys.stderr)
                 sid, exit_code = backend.create_session(task, agent.body or None, system_mode=system_mode)
                 register(agent_name, session_name, sid)
-                print(f"[subagents] Session registered: {agent_name}/{session_name} (id: {sid})", file=sys.stderr)
+                print(f"[subagents] Session registered: {agent_name}/{session_name}", file=sys.stderr)
         finally:
             backend.close()
 
@@ -161,7 +161,7 @@ def _run_with_agent(
         add_task(agent_name, session_name, task, task_status)
         complete(agent_name, session_name)
         release(lock_path)
-        print(f"[subagents] Session {session_name} completed (exit: {exit_code})", file=sys.stderr)
+        print(f"[subagents] Session {session_name} completed", file=sys.stderr)
         return exit_code
 
     if bg:
@@ -179,6 +179,7 @@ def _run_no_agent(
 ) -> None:
     """Run without agent file — create if new, resume if exists."""
     print(f"[subagents] Session name: {session_name}", file=sys.stderr)
+    print(f"[subagents] Backend: {backend_override or _detect_backend()}", file=sys.stderr)
 
     if check(session_name):
         _fail(f"session '{session_name}' is already running. Wait with: subagents wait {session_name}")
@@ -190,13 +191,13 @@ def _run_no_agent(
         backend = _make_backend(backend_override, transport)
         try:
             if existing_sid:
-                print(f"[subagents] Resuming existing session (id: {existing_sid})...", file=sys.stderr)
+                print("[subagents] Resuming existing session...", file=sys.stderr)
                 exit_code = backend.resume_session(existing_sid, task)
             else:
                 print("[subagents] Creating new session...", file=sys.stderr)
                 sid, exit_code = backend.create_session(task)
                 register(session_name, session_name, sid)
-                print(f"[subagents] Session registered: {session_name} (id: {sid})", file=sys.stderr)
+                print(f"[subagents] Session registered: {session_name}", file=sys.stderr)
         finally:
             backend.close()
 
@@ -204,7 +205,7 @@ def _run_no_agent(
         add_task(session_name, session_name, task, task_status)
         complete(session_name, session_name)
         release(lock_path)
-        print(f"[subagents] Session {session_name} completed (exit: {exit_code})", file=sys.stderr)
+        print(f"[subagents] Session {session_name} completed", file=sys.stderr)
         return exit_code
 
     if bg:
