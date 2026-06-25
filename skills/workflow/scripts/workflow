@@ -2,13 +2,12 @@
 """workflow — Multi-agent orchestration with pipeline, parallel, and phases.
 
 Usage:
-    workflow run <script.py> [--args '<json>']
-    workflow list
-    workflow status <run-id>
+    workflow run <script.py> [--args '<json>'] [--resume <run_id>]
+    workflow resume <run_id> <script.py> [--args '<json>']
 
 The script must define:
     meta = {"name": "...", "description": "...", "phases": [...]}
-    def run(agent, parallel, pipeline, phase, log, args): ...
+    def run(agent, parallel, pipeline, phase, log, args, workflow): ...
 """
 
 import json
@@ -19,31 +18,13 @@ _script_dir = Path(__file__).resolve().parent
 _lib_dir = _script_dir / "lib"
 sys.path.insert(0, str(_lib_dir))
 
-from runtime import agent, parallel, pipeline, phase, log  # noqa: E402
+from runtime import (  # noqa: E402
+    agent, parallel, pipeline, phase, log, workflow,
+    set_context,
+)
 
 
-def cmd_run(args: list[str]) -> None:
-    if not args:
-        print("Error: workflow run <script.py> [--args '<json>']", file=sys.stderr)
-        sys.exit(1)
-
-    script_path = Path(args[0])
-    if not script_path.is_file():
-        print(f"Error: script not found: {script_path}", file=sys.stderr)
-        sys.exit(1)
-
-    # Parse --args
-    wf_args: dict = {}
-    if "--args" in args:
-        idx = args.index("--args")
-        if idx + 1 < len(args):
-            try:
-                wf_args = json.loads(args[idx + 1])
-            except json.JSONDecodeError as e:
-                print(f"Error: invalid --args JSON: {e}", file=sys.stderr)
-                sys.exit(1)
-
-    # Load and execute the workflow script
+def _load_script(script_path: Path):
     import importlib.util
     spec = importlib.util.spec_from_file_location("workflow_script", script_path)
     if spec is None or spec.loader is None:
@@ -51,17 +32,91 @@ def cmd_run(args: list[str]) -> None:
         sys.exit(1)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-
     if not hasattr(mod, "run"):
         print(f"Error: {script_path} must define a run() function", file=sys.stderr)
         sys.exit(1)
+    return mod
 
+
+def _parse_flags(args: list[str]) -> tuple[dict, str | None, bool]:
+    """Parse --args and --resume from args, returning (wf_args, resume_id, is_resume)."""
+    wf_args: dict = {}
+    resume_id: str | None = None
+    is_resume = False
+
+    i = 0
+    while i < len(args):
+        if args[i] == "--args":
+            i += 1
+            if i < len(args):
+                try:
+                    wf_args = json.loads(args[i])
+                except json.JSONDecodeError as e:
+                    print(f"Error: invalid --args JSON: {e}", file=sys.stderr)
+                    sys.exit(1)
+        elif args[i] == "--resume":
+            i += 1
+            if i < len(args):
+                resume_id = args[i]
+                is_resume = True
+        i += 1
+    return wf_args, resume_id, is_resume
+
+
+def cmd_run(args: list[str]) -> None:
+    if not args:
+        print("Error: workflow run <script.py> [--args '<json>'] [--resume <run_id>]", file=sys.stderr)
+        sys.exit(1)
+
+    script_path = Path(args[0])
+    if not script_path.is_file():
+        print(f"Error: script not found: {script_path}", file=sys.stderr)
+        sys.exit(1)
+
+    wf_args, resume_id, is_resume = _parse_flags(args[1:])
+    set_context(run_id=resume_id, resume=is_resume)
+
+    mod = _load_script(script_path)
     meta = getattr(mod, "meta", {})
     print(f"[workflow] {meta.get('name', script_path.name)} — {meta.get('description', '')}",
           file=sys.stderr)
+    if is_resume:
+        print(f"[workflow] Resuming run {resume_id}", file=sys.stderr)
 
-    result = mod.run(agent=agent, parallel=parallel, pipeline=pipeline,
-                     phase=phase, log=log, args=wf_args)
+    result = mod.run(
+        agent=agent, parallel=parallel, pipeline=pipeline,
+        phase=phase, log=log, args=wf_args, workflow=workflow,
+    )
+
+    if result is not None:
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+
+
+def cmd_resume(args: list[str]) -> None:
+    """Resume a failed workflow run."""
+    if len(args) < 2:
+        print("Error: workflow resume <run_id> <script.py> [--args '<json>']", file=sys.stderr)
+        sys.exit(1)
+
+    run_id = args[0]
+    script_path = Path(args[1])
+    if not script_path.is_file():
+        print(f"Error: script not found: {script_path}", file=sys.stderr)
+        sys.exit(1)
+
+    wf_args, _, _ = _parse_flags(args[2:])
+    set_context(run_id=run_id, resume=True)
+
+    mod = _load_script(script_path)
+    meta = getattr(mod, "meta", {})
+    print(f"[workflow] {meta.get('name', script_path.name)} — {meta.get('description', '')}",
+          file=sys.stderr)
+    print(f"[workflow] Resuming run {run_id}", file=sys.stderr)
+
+    result = mod.run(
+        agent=agent, parallel=parallel, pipeline=pipeline,
+        phase=phase, log=log, args=wf_args, workflow=workflow,
+    )
 
     if result is not None:
         print(json.dumps(result, indent=2, ensure_ascii=False))
@@ -79,7 +134,8 @@ def main() -> None:
     args = sys.argv[1:]
     if not args:
         print("Usage: workflow <command> [args...]", file=sys.stderr)
-        print("  workflow run <script.py> [--args '<json>']", file=sys.stderr)
+        print("  workflow run <script.py> [--args '<json>'] [--resume <run_id>]", file=sys.stderr)
+        print("  workflow resume <run_id> <script.py> [--args '<json>']", file=sys.stderr)
         print("  workflow list", file=sys.stderr)
         print("  workflow status <run-id>", file=sys.stderr)
         sys.exit(1)
@@ -87,6 +143,8 @@ def main() -> None:
     cmd = args.pop(0)
     if cmd == "run":
         cmd_run(args)
+    elif cmd == "resume":
+        cmd_resume(args)
     elif cmd == "list":
         cmd_list(args)
     elif cmd == "status":
