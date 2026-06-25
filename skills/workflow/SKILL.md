@@ -235,6 +235,25 @@ if flaws:
     solution = agent(f"Fix: {flaws}")
 ```
 
+## Monitoring
+
+```bash
+# List all workflow runs with session status
+scripts/workflow list
+# Run: abc123
+#   ✓ wf_abc123_1  [done]  Review security
+#   … wf_abc123_2  [running]  Review performance
+
+# Detailed status of a single run
+scripts/workflow status abc123
+# Run: abc123
+# Sessions: 1 done, 1 running, 0 failed (total 2)
+
+# Stop a running workflow
+scripts/workflow stop abc123
+# Stopped 1 session(s) in run 'abc123'.
+```
+
 ## Rules
 
 - Each `agent()` call creates a session via `subagents run --bg --output json`.
