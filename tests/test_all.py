@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 
 # Add lib/ and sub-packages to path
-_lib = Path(__file__).resolve().parent.parent
+_lib = Path(__file__).resolve().parent.parent / "skills" / "subagents" / "scripts" / "lib"
 sys.path.insert(0, str(_lib / "backends"))
 sys.path.insert(0, str(_lib / "transports"))
 sys.path.insert(0, str(_lib))
