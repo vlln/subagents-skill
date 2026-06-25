@@ -8,14 +8,15 @@ from cli_backend import CliBackend
 
 
 class OpencodeBackend(BaseBackend):
-    def __init__(self, transport: str | None = None):
+    def __init__(self, transport: str | None = None, text_handler=None):
         use_acp = transport == "acp"
+        self._th = text_handler
         if use_acp:
-            self._acp = AcpBackend(["opencode", "acp"])
+            self._acp = AcpBackend(["opencode", "acp"], text_handler=text_handler)
             self._cli = None
         else:
             self._acp = None
-            self._cli = _OpencodeCli()
+            self._cli = _OpencodeCli(text_handler=text_handler)
 
     def create_session(self, user: str, system: str | None = None, model: str | None = None, system_mode: str = "append") -> tuple[str, int]:
         if self._acp:
@@ -23,7 +24,7 @@ class OpencodeBackend(BaseBackend):
                 return self._acp.create_session(user, system, model, system_mode)
             except Exception:
                 self._acp = None
-                self._cli = _OpencodeCli()
+                self._cli = _OpencodeCli(text_handler=self._th)
         return self._cli.create_session(user, system, model, system_mode)
 
     def resume_session(self, sid: str, user: str, system: str | None = None, model: str | None = None, system_mode: str = "append") -> int:
@@ -32,7 +33,7 @@ class OpencodeBackend(BaseBackend):
                 return self._acp.resume_session(sid, user, system, model, system_mode)
             except Exception:
                 self._acp = None
-                self._cli = _OpencodeCli()
+                self._cli = _OpencodeCli(text_handler=self._th)
         return self._cli.resume_session(sid, user, system, model, system_mode)
 
     def list_sessions(self) -> list[dict]:

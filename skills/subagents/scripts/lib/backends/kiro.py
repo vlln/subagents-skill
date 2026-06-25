@@ -9,16 +9,17 @@ from utils import check_acp
 
 
 class KiroBackend(BaseBackend):
-    def __init__(self, transport: str | None = None):
+    def __init__(self, transport: str | None = None, text_handler=None):
         use_acp = transport == "acp" or (transport is None and check_acp("kiro-cli"))
         if transport == "cli":
             use_acp = False
+        self._th = text_handler
         if use_acp:
-            self._acp = AcpBackend(["kiro-cli", "acp"])
+            self._acp = AcpBackend(["kiro-cli", "acp"], text_handler=text_handler)
             self._cli = None
         else:
             self._acp = None
-            self._cli = _KiroCli()
+            self._cli = _KiroCli(text_handler=text_handler)
 
     def create_session(self, user: str, system: str | None = None, model: str | None = None, system_mode: str = "append") -> tuple[str, int]:
         if self._acp:
@@ -26,7 +27,7 @@ class KiroBackend(BaseBackend):
                 return self._acp.create_session(user, system, model, system_mode)
             except Exception:
                 self._acp = None
-                self._cli = _KiroCli()
+                self._cli = _KiroCli(text_handler=self._th)
         return self._cli.create_session(user, system, model, system_mode)
 
     def resume_session(self, sid: str, user: str, system: str | None = None, model: str | None = None, system_mode: str = "append") -> int:
@@ -35,7 +36,7 @@ class KiroBackend(BaseBackend):
                 return self._acp.resume_session(sid, user, system, model, system_mode)
             except Exception:
                 self._acp = None
-                self._cli = _KiroCli()
+                self._cli = _KiroCli(text_handler=self._th)
         return self._cli.resume_session(sid, user, system, model, system_mode)
 
     def list_sessions(self) -> list[dict]:

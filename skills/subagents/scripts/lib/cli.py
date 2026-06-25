@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from agent import list_agents, parse_agent
 from backends.claude import ClaudeBackend
@@ -46,6 +47,53 @@ BACKEND_MAP: dict[str, type[BaseBackend]] = {
     "gemini":   GeminiBackend,
 }
 
+# ── JSONL output ──────────────────────────────────────────────────────────
+
+class JsonlEmitter:
+    """Emits JSONL events to a file (stdout or a disk file)."""
+
+    def __init__(self, file=None) -> None:
+        self._file = file or sys.stdout
+
+    def emit(self, **event) -> None:
+        print(json.dumps(event, ensure_ascii=False), file=self._file, flush=True)
+
+    def agent_start(self, session: str, agent: str | None = None, backend: str | None = None) -> None:
+        self.emit(type="agent_start", session=session, agent=agent, backend=backend)
+
+    def agent_text(self, session: str, content: str) -> None:
+        self.emit(type="agent_text", session=session, content=content)
+
+    def agent_done(self, session: str, exit_code: int = 0) -> None:
+        self.emit(type="agent_done", session=session, exit_code=exit_code)
+
+    def agent_error(self, session: str, error: str) -> None:
+        self.emit(type="agent_error", session=session, error=error)
+
+    def agent_list(self, agents: list[dict]) -> None:
+        self.emit(type="agent_list", agents=agents)
+
+    def agent_status(self, agent: str, session: str | None, status: str, tasks: list[dict] | None = None) -> None:
+        evt: dict = {"type": "agent_status", "agent": agent, "status": status}
+        if session:
+            evt["session"] = session
+        if tasks is not None:
+            evt["tasks"] = tasks
+        self.emit(**evt)
+
+    def close(self) -> None:
+        if self._file is not sys.stdout:
+            self._file.close()
+
+
+def _make_text_handler(emitter: JsonlEmitter, session: str) -> Callable[[str], None]:
+    def handler(text: str) -> None:
+        if text:
+            emitter.agent_text(session, text)
+    return handler
+
+
+# ── backend helpers ───────────────────────────────────────────────────────
 
 def _detect_backend() -> str:
     import shutil
@@ -55,7 +103,11 @@ def _detect_backend() -> str:
     return "kimi"
 
 
-def _make_backend(backend_name: str | None, transport: str | None) -> BaseBackend:
+def _make_backend(
+    backend_name: str | None,
+    transport: str | None,
+    text_handler: Callable[[str], None] | None = None,
+) -> BaseBackend:
     if backend_name is None:
         backend_name = _detect_backend()
     cls = BACKEND_MAP.get(backend_name)
@@ -64,22 +116,29 @@ def _make_backend(backend_name: str | None, transport: str | None) -> BaseBacken
         print(f"Available backends: {', '.join(BACKEND_MAP.keys())}", file=sys.stderr)
         sys.exit(1)
     import inspect
-    if "transport" in inspect.signature(cls).parameters:
-        return cls(transport=transport)
-    return cls()
+    sig = inspect.signature(cls)
+    kwargs: dict = {}
+    if "transport" in sig.parameters:
+        kwargs["transport"] = transport
+    if "text_handler" in sig.parameters:
+        kwargs["text_handler"] = text_handler
+    return cls(**kwargs)
 
+
+def _fail(msg: str) -> None:
+    print(f"Error: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+# ── run ───────────────────────────────────────────────────────────────────
 
 def cmd_run(args: list[str]) -> None:
-    """Run a task on an agent session.
-
-    Usage:
-        subagents run [--bg] [--backend <name>] [--transport <mode>] [--system-mode <mode>] <agent> <session> <prompt>
-        subagents run [--bg] <session> <prompt>                      # resume only
-    """
+    """Run a task on an agent session."""
     bg = False
     backend_override: str | None = None
     transport: str | None = None
     system_mode = "append"
+    output_json = False
 
     while args and args[0].startswith("--"):
         flag = args.pop(0)
@@ -95,11 +154,16 @@ def cmd_run(args: list[str]) -> None:
             system_mode = args.pop(0) if args else _fail("--system-mode requires a value")
             if system_mode not in ("append", "overwrite"):
                 _fail(f"--system-mode must be 'append' or 'overwrite', got '{system_mode}'")
+        elif flag == "--output":
+            val = args.pop(0) if args else _fail("--output requires a value")
+            if val != "json":
+                _fail(f"--output must be 'json', got '{val}'")
+            output_json = True
         else:
             _fail(f"unknown flag {flag}")
 
     if len(args) < 2:
-        _fail("Usage: subagentss run [--bg] [--backend <name>] <agent> <session> <prompt>")
+        _fail("Usage: subagents run [--bg] [--backend <name>] <agent> <session> <prompt>")
 
     arg1 = args[0]
     agent_path = Path(AGENTS_DIR) / f"{arg1}.md"
@@ -109,19 +173,14 @@ def cmd_run(args: list[str]) -> None:
         session_name = args.pop(0) if args else ""
         task = " ".join(args) if args else ""
         if not session_name or not task:
-            _fail("Usage: subagentss run [--bg] <agent> <session> <prompt>")
-        _run_with_agent(agent_name, session_name, task, bg, backend_override, transport, system_mode)
+            _fail("Usage: subagents run [--bg] <agent> <session> <prompt>")
+        _run_with_agent(agent_name, session_name, task, bg, backend_override, transport, system_mode, output_json)
     else:
         session_name = args.pop(0)
         task = " ".join(args) if args else ""
         if not task:
-            _fail("Usage: subagentss run [--bg] <session> <prompt>")
-        _run_no_agent(session_name, task, bg, backend_override, transport)
-
-
-def _fail(msg: str) -> None:
-    print(f"Error: {msg}", file=sys.stderr)
-    sys.exit(1)
+            _fail("Usage: subagents run [--bg] <session> <prompt>")
+        _run_no_agent(session_name, task, bg, backend_override, transport, output_json)
 
 
 def _run_with_agent(
@@ -132,12 +191,18 @@ def _run_with_agent(
     backend_override: str | None,
     transport: str | None,
     system_mode: str,
+    output_json: bool,
 ) -> None:
     agent = parse_agent(Path(AGENTS_DIR) / f"{agent_name}.md")
+    backend_name = backend_override or _detect_backend()
+
+    if output_json:
+        _run_with_agent_json(agent, agent_name, session_name, task, bg, backend_name, backend_override, transport, system_mode)
+        return
 
     print(f"[subagents] Agent: {agent.name} — {agent.description}", file=sys.stderr)
     print(f"[subagents] Session name: {session_name}", file=sys.stderr)
-    print(f"[subagents] Backend: {backend_override or _detect_backend()}", file=sys.stderr)
+    print(f"[subagents] Backend: {backend_name}", file=sys.stderr)
 
     if check(session_name):
         _fail(f"session '{session_name}' is already running. Wait with: subagents wait {session_name}")
@@ -167,9 +232,60 @@ def _run_with_agent(
         return exit_code
 
     if bg:
-        _execute_in_background(session_name, lock_path, _execute)
+        _execute_in_background(session_name, lock_path, _execute, output_json=False)
     else:
         sys.exit(_execute())
+
+
+def _run_with_agent_json(
+    agent,
+    agent_name: str,
+    session_name: str,
+    task: str,
+    bg: bool,
+    backend_name: str,
+    backend_override: str | None,
+    transport: str | None,
+    system_mode: str,
+) -> None:
+    emitter = JsonlEmitter()
+    emitter.agent_start(session_name, agent=agent_name, backend=backend_name)
+
+    if check(session_name):
+        emitter.agent_error(session_name, f"session '{session_name}' is already running")
+        sys.exit(1)
+
+    lock_path = acquire(session_name)
+
+    def _execute(emit: JsonlEmitter) -> int:
+        th = _make_text_handler(emit, session_name)
+        backend = _make_backend(backend_override, transport, text_handler=th)
+        try:
+            existing_sid = get_session_id(agent_name, session_name)
+            if existing_sid:
+                exit_code = backend.resume_session(existing_sid, task, agent.body or None, system_mode=system_mode)
+            else:
+                sid, exit_code = backend.create_session(task, agent.body or None, system_mode=system_mode)
+                register(agent_name, session_name, sid)
+        finally:
+            backend.close()
+
+        task_status = "done" if exit_code == 0 else "failed"
+        add_task(agent_name, session_name, task, task_status)
+        complete(agent_name, session_name)
+        release(lock_path)
+        emit.agent_done(session_name, exit_code=exit_code)
+        emit.close()
+        return exit_code
+
+    if bg:
+        output_file = _jsonl_output_path(session_name)
+        file_emitter = JsonlEmitter(open(output_file, "w"))
+        file_emitter.agent_start(session_name, agent=agent_name, backend=backend_name)
+        emitter.close()
+        _execute_in_background(session_name, lock_path, lambda: _execute(file_emitter), output_json=True)
+    else:
+        sys.exit(_execute(emitter))
 
 
 def _run_no_agent(
@@ -178,10 +294,17 @@ def _run_no_agent(
     bg: bool,
     backend_override: str | None,
     transport: str | None,
+    output_json: bool,
 ) -> None:
     """Run without agent file — create if new, resume if exists."""
+    backend_name = backend_override or _detect_backend()
+
+    if output_json:
+        _run_no_agent_json(session_name, task, bg, backend_name, backend_override, transport)
+        return
+
     print(f"[subagents] Session name: {session_name}", file=sys.stderr)
-    print(f"[subagents] Backend: {backend_override or _detect_backend()}", file=sys.stderr)
+    print(f"[subagents] Backend: {backend_name}", file=sys.stderr)
 
     if check(session_name):
         _fail(f"session '{session_name}' is already running. Wait with: subagents wait {session_name}")
@@ -211,12 +334,64 @@ def _run_no_agent(
         return exit_code
 
     if bg:
-        _execute_in_background(session_name, lock_path, _execute)
+        _execute_in_background(session_name, lock_path, _execute, output_json=False)
     else:
         sys.exit(_execute())
 
 
-def _execute_in_background(session_name: str, lock_path: Path, fn) -> None:
+def _run_no_agent_json(
+    session_name: str,
+    task: str,
+    bg: bool,
+    backend_name: str,
+    backend_override: str | None,
+    transport: str | None,
+) -> None:
+    emitter = JsonlEmitter()
+    emitter.agent_start(session_name, backend=backend_name)
+
+    if check(session_name):
+        emitter.agent_error(session_name, f"session '{session_name}' is already running")
+        sys.exit(1)
+
+    existing_sid = get_session_id_from_any(session_name)
+    lock_path = acquire(session_name)
+
+    def _execute(emit: JsonlEmitter) -> int:
+        th = _make_text_handler(emit, session_name)
+        backend = _make_backend(backend_override, transport, text_handler=th)
+        try:
+            if existing_sid:
+                exit_code = backend.resume_session(existing_sid, task)
+            else:
+                sid, exit_code = backend.create_session(task)
+                register(session_name, session_name, sid)
+        finally:
+            backend.close()
+
+        task_status = "done" if exit_code == 0 else "failed"
+        add_task(session_name, session_name, task, task_status)
+        complete(session_name, session_name)
+        release(lock_path)
+        emit.agent_done(session_name, exit_code=exit_code)
+        emit.close()
+        return exit_code
+
+    if bg:
+        output_file = _jsonl_output_path(session_name)
+        file_emitter = JsonlEmitter(open(output_file, "w"))
+        file_emitter.agent_start(session_name, backend=backend_name)
+        emitter.close()
+        _execute_in_background(session_name, lock_path, lambda: _execute(file_emitter), output_json=True)
+    else:
+        sys.exit(_execute(emitter))
+
+
+def _jsonl_output_path(session_name: str) -> str:
+    return os.path.join(OUTPUT_DIR, f"{session_name}.jsonl")
+
+
+def _execute_in_background(session_name: str, lock_path: Path, fn, output_json: bool = False) -> None:
     if not hasattr(os, "fork"):
         release(lock_path)
         _fail("Background mode (--bg) requires Unix (os.fork not available on this platform)")
@@ -229,17 +404,34 @@ def _execute_in_background(session_name: str, lock_path: Path, fn) -> None:
     else:
         pid_file = lock_path.parent / f"{session_name}.pid"
         pid_file.write_text(str(pid))
-        output_file = Path(OUTPUT_DIR) / f"{session_name}.out"
-        print(f"[subagents] Background task started: {session_name} (pid: {pid})", file=sys.stderr)
-        print(f"[subagents] Output: {output_file}", file=sys.stderr)
-        print(f"[subagents] Wait with: subagents wait {session_name}", file=sys.stderr)
+        if not output_json:
+            output_file = Path(OUTPUT_DIR) / f"{session_name}.out"
+            print(f"[subagents] Background task started: {session_name} (pid: {pid})", file=sys.stderr)
+            print(f"[subagents] Output: {output_file}", file=sys.stderr)
+            print(f"[subagents] Wait with: subagents wait {session_name}", file=sys.stderr)
         release(lock_path)
 
 
+# ── wait ──────────────────────────────────────────────────────────────────
+
 def cmd_wait(args: list[str]) -> None:
     if not args:
-        _fail("Usage: subagentss wait <session>")
+        _fail("Usage: subagents wait <session>")
+
+    output_json = False
+    clean = _parse_output_flag(args)
+    if clean is not None:
+        output_json = True
+        args = clean
+
+    if not args:
+        _fail("Usage: subagents wait <session>")
     session_name = args[0]
+
+    if output_json:
+        _wait_json(session_name)
+        return
+
     output_file = Path(OUTPUT_DIR) / f"{session_name}.out"
     if not check(session_name):
         if output_file.is_file():
@@ -255,7 +447,58 @@ def cmd_wait(args: list[str]) -> None:
     print(f"[subagents] Session {session_name} finished.", file=sys.stderr)
 
 
+def _wait_json(session_name: str) -> None:
+    jsonl_file = _jsonl_output_path(session_name)
+    if not check(session_name):
+        if os.path.isfile(jsonl_file):
+            with open(jsonl_file) as fh:
+                for line in fh:
+                    sys.stdout.write(line)
+            sys.stdout.flush()
+            return
+        _fail(f"session '{session_name}' not found (never started or already cleaned up)")
+    while check(session_name):
+        time.sleep(0.5)
+    if os.path.isfile(jsonl_file):
+        with open(jsonl_file) as fh:
+            for line in fh:
+                sys.stdout.write(line)
+        sys.stdout.flush()
+
+
+# ── list / status ─────────────────────────────────────────────────────────
+
+def _parse_output_flag(args: list[str]) -> list[str] | None:
+    """Parse --output json from args, returning remaining args or None."""
+    clean: list[str] = []
+    found = False
+    i = 0
+    while i < len(args):
+        if args[i] == "--output":
+            i += 1
+            if i < len(args):
+                if args[i] != "json":
+                    _fail(f"--output must be 'json', got '{args[i]}'")
+                found = True
+            else:
+                _fail("--output requires a value")
+        else:
+            clean.append(args[i])
+        i += 1
+    return clean if found else None
+
+
 def cmd_list(args: list[str]) -> None:
+    output_json = False
+    clean = _parse_output_flag(args)
+    if clean is not None:
+        output_json = True
+        args = clean
+
+    if output_json:
+        _list_json()
+        return
+
     agents = list_agents(AGENTS_DIR)
     print("Agents:")
     print("=======")
@@ -278,9 +521,37 @@ def cmd_list(args: list[str]) -> None:
             print("    sessions: (none)")
 
 
+def _list_json() -> None:
+    agents = list_agents(AGENTS_DIR)
+    result: list[dict] = []
+    for agent in agents:
+        item: dict = {"name": agent.name, "description": agent.description}
+        sessions = list_sessions(agent.name)
+        if sessions:
+            item["sessions"] = []
+            for s in sessions:
+                sid = get_session_id(agent.name, s) or "?"
+                status = get_session_status(agent.name, s)
+                item["sessions"].append({"name": s, "id": sid, "status": status})
+        result.append(item)
+    emitter = JsonlEmitter()
+    emitter.agent_list(result)
+
+
 def cmd_status(args: list[str]) -> None:
+    output_json = False
+    clean = _parse_output_flag(args)
+    if clean is not None:
+        output_json = True
+        args = clean
+
     if not args:
-        _fail("Usage: subagentss status <agent> [session]")
+        _fail("Usage: subagents status <agent> [session]")
+
+    if output_json:
+        _status_json(args)
+        return
+
     agent_name = args[0]
     session_name = args[1] if len(args) > 1 else ""
     agent_path = Path(AGENTS_DIR) / f"{agent_name}.md"
@@ -326,6 +597,47 @@ def cmd_status(args: list[str]) -> None:
                 print(f"  - {s} (id: {sid}, status: {status})")
 
 
+def _status_json(args: list[str]) -> None:
+    agent_name = args[0]
+    session_name = args[1] if len(args) > 1 else ""
+    agent_path = Path(AGENTS_DIR) / f"{agent_name}.md"
+    if not agent_path.is_file():
+        emitter = JsonlEmitter()
+        emitter.agent_error("", f"agent '{agent_name}' not found")
+        sys.exit(1)
+
+    if session_name:
+        sid = get_session_id(agent_name, session_name)
+        if not sid:
+            emitter = JsonlEmitter()
+            emitter.agent_error(session_name, f"session '{session_name}' not found for agent '{agent_name}'")
+            sys.exit(1)
+        status = get_session_status(agent_name, session_name)
+        tasks: list[dict] | None = None
+        data = get_all_data()
+        try:
+            tasks = data[agent_name]["sessions"][session_name]["tasks"]
+        except KeyError:
+            pass
+        emitter = JsonlEmitter()
+        emitter.agent_status(agent_name, session_name, status, tasks=tasks)
+    else:
+        sessions = list_sessions(agent_name)
+        if not sessions:
+            emitter = JsonlEmitter()
+            emitter.agent_status(agent_name, None, "no-sessions")
+        else:
+            result: list[dict] = []
+            for s in sessions:
+                sid = get_session_id(agent_name, s) or "?"
+                st = get_session_status(agent_name, s)
+                result.append({"name": s, "id": sid, "status": st})
+            emitter = JsonlEmitter()
+            emitter.agent_status(agent_name, None, "ok", tasks=result)
+
+
+# ── main ──────────────────────────────────────────────────────────────────
+
 def main() -> None:
     args = sys.argv[1:]
     if not args:
@@ -352,11 +664,11 @@ def _print_help() -> None:
     print("Usage: subagents <command> [args...]", file=sys.stderr)
     print(file=sys.stderr)
     print("Commands:", file=sys.stderr)
-    print("  run [--bg] [--backend <name>] [--transport cli|acp] [--system-mode append|overwrite] <agent> <session> <prompt>", file=sys.stderr)
-    print("  run [--bg] <session> <prompt>", file=sys.stderr)
-    print("  wait <session>", file=sys.stderr)
-    print("  list", file=sys.stderr)
-    print("  status <agent> [session]", file=sys.stderr)
+    print("  run [--bg] [--backend <name>] [--transport cli|acp] [--system-mode append|overwrite] [--output json] <agent> <session> <prompt>", file=sys.stderr)
+    print("  run [--bg] [--output json] <session> <prompt>", file=sys.stderr)
+    print("  wait [--output json] <session>", file=sys.stderr)
+    print("  list [--output json]", file=sys.stderr)
+    print("  status [--output json] <agent> [session]", file=sys.stderr)
 
 
 if __name__ == "__main__":

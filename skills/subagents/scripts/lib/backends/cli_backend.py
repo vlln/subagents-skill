@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+import sys
 import time
 from abc import abstractmethod
-from typing import ClassVar
+from typing import Callable, ClassVar
 
 from base import BaseBackend
 from transports.cli import CliTransport
@@ -20,12 +21,16 @@ class CliBackend(BaseBackend):
       - _parse_line(line) → (text | None, session_id | None)
 
     Set _sid_on_stderr = True if the session_id appears on stderr.
+
+    text_handler: optional callback(text_chunk) for JSONL output mode.
+    When set, agent text output is routed through it instead of stdout.
     """
 
     _sid_on_stderr: ClassVar[bool] = False
 
-    def __init__(self) -> None:
+    def __init__(self, text_handler: Callable[[str], None] | None = None) -> None:
         self._transport = CliTransport()
+        self._text_handler = text_handler
 
     @abstractmethod
     def _cmd_create(self, user: str, system: str | None, model: str | None, system_mode: str) -> list[str]: ...
@@ -36,39 +41,68 @@ class CliBackend(BaseBackend):
     @abstractmethod
     def _parse_line(self, line: str) -> tuple[str | None, str | None]: ...
 
+    def _emit_text(self, text: str) -> None:
+        if self._text_handler:
+            self._text_handler(text)
+        else:
+            sys.stdout.write(text)
+            sys.stdout.flush()
+
     def create_session(self, user: str, system: str | None = None, model: str | None = None, system_mode: str = "append") -> tuple[str, int]:
         cmd = self._cmd_create(user, system, model, system_mode)
         sid: str = ""
 
         if self._sid_on_stderr:
-            ec = self._transport.run(cmd, on_stderr=_StderrSidExtractor(self, sid_capture := _SidCapture()))
+            def _on_stdout_line(line: str) -> None:
+                if self._text_handler:
+                    self._text_handler(line)
+                else:
+                    sys.stdout.write(line + "\n")
+                    sys.stdout.flush()
+            ec = self._transport.run(
+                cmd,
+                on_stdout=_on_stdout_line,
+                on_stderr=_StderrSidExtractor(self, sid_capture := _SidCapture()),
+            )
             sid = sid_capture.value
         else:
             def on_stdout(line: str) -> None:
                 nonlocal sid
                 text, new_sid = self._parse_line(line)
                 if text:
-                    print(text, end="", flush=True)
+                    self._emit_text(text)
                 if new_sid:
                     sid = new_sid
             ec = self._transport.run(cmd, on_stdout=on_stdout, on_stderr=lambda _: None)
 
-        print()
+        if not self._text_handler:
+            print()
         return (sid or f"unknown-{int(time.time_ns())}", ec)
 
     def resume_session(self, session_id: str, user: str, system: str | None = None, model: str | None = None, system_mode: str = "append") -> int:
         cmd = self._cmd_resume(session_id, user, system, model, system_mode)
 
         if self._sid_on_stderr:
-            ec = self._transport.run(cmd, on_stderr=lambda _: None)
+            def _on_stdout_line(line: str) -> None:
+                if self._text_handler:
+                    self._text_handler(line)
+                else:
+                    sys.stdout.write(line + "\n")
+                    sys.stdout.flush()
+            ec = self._transport.run(
+                cmd,
+                on_stdout=_on_stdout_line,
+                on_stderr=lambda _: None,
+            )
         else:
             def on_stdout(line: str) -> None:
                 text, _ = self._parse_line(line)
                 if text:
-                    print(text, end="", flush=True)
+                    self._emit_text(text)
             ec = self._transport.run(cmd, on_stdout=on_stdout, on_stderr=lambda _: None)
 
-        print()
+        if not self._text_handler:
+            print()
         return ec
 
     def list_sessions(self) -> list[dict]:

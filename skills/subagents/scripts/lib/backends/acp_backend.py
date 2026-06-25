@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Callable
 
 from base import BaseBackend
 from transports.acp import AcpTransport
@@ -13,13 +14,16 @@ class AcpBackend(BaseBackend):
     """Base for ACP backends. Handles initialize, session/new, session/load, session/prompt.
 
     Subclasses only need to pass the command (e.g. ["kimi", "acp"]).
+
+    text_handler: optional callback(text_chunk) for JSONL output mode.
     """
 
-    def __init__(self, command: list[str]):
+    def __init__(self, command: list[str], text_handler: Callable[[str], None] | None = None):
         self._transport = AcpTransport(
             command=command,
             client_info={"name": "subagents", "version": "0.1.0"},
         )
+        self._text_handler = text_handler
         self._transport.on_notification("session/update", self._on_update)
 
     def _on_update(self, params: dict) -> None:
@@ -27,8 +31,11 @@ class AcpBackend(BaseBackend):
         if u.get("sessionUpdate") == "agent_message_chunk":
             c = u.get("content", {})
             if c.get("type") == "text":
-                sys.stdout.write(c["text"])
-                sys.stdout.flush()
+                if self._text_handler:
+                    self._text_handler(c["text"])
+                else:
+                    sys.stdout.write(c["text"])
+                    sys.stdout.flush()
 
     def create_session(
         self, user: str, system: str | None = None, model: str | None = None, system_mode: str = "append"
