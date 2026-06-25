@@ -5,7 +5,9 @@ Agent Skills for dispatching tasks to AI coding agents across multiple backends.
 - **One interface, eight backends.** kimi, claude, codex, pi, opencode, qwen, kiro, and gemini — same `subagents run` command for all.
 - **Sessions persist.** Each run creates a named session. Resume it later and the agent remembers all prior context.
 - **Parallel swarms.** Run multiple agents in background with `--bg`, wait for all to finish with `subagents wait`.
+- **Workflow orchestration.** `pipeline()`, `parallel()`, and nested `workflow()` for multi-agent workflows with resume support.
 - **Auto-detection.** Backend and transport (CLI or [ACP](https://agentclientprotocol.com)) are auto-detected. Override with `--backend` and `--transport`.
+- **JSONL output.** `--output json` for structured, streamable, versioned JSONL output.
 - **Zero dependencies.** Python 3.10+ standard library only. No pip install, no virtualenv.
 
 ## Supported Backends
@@ -62,7 +64,29 @@ git clone https://github.com/your-org/subagents-skills.git ~/.opencode/skills/su
 
 | Skill | Description |
 |-------|-------------|
-| [subagents](skills/subagents/SKILL.md) | Dispatch tasks to named agent sessions across multiple backends (kimi, claude, codex, pi, opencode, qwen, kiro). Supports session resume, parallel swarms, and background execution. |
+| [subagents](skills/subagents/SKILL.md) | Dispatch tasks to named agent sessions across multiple backends. Supports session resume, parallel swarms, and JSONL output. |
+| [workflow](skills/workflow/SKILL.md) | Multi-agent orchestration with pipeline, parallel, and phase-based workflows. Nested sub-workflows, resume, and structured output. |
+
+## Development
+
+Python 3.10+, zero dependencies. Tests use only the standard library.
+
+```bash
+# Unit tests (no backend required, CI-safe)
+python3 -m pytest tests/ --ignore=tests/test_integration.py
+
+# Integration tests (requires kimi CLI)
+SKIP_INTEGRATION=0 python3 -m pytest tests/test_integration.py -v
+
+# All tests
+SKIP_INTEGRATION=0 python3 -m pytest tests/ -v
+```
+
+| Layer | File | Count | Trigger | Time |
+|-------|------|-------|---------|------|
+| Unit | `tests/test_subagents.py` | 67 | `pytest` auto | <1s |
+| Unit | `tests/test_workflow.py` | 20 | `pytest` auto | <1s |
+| Integration | `tests/test_integration.py` | 8 | `SKIP_INTEGRATION=0` | ~3min |
 
 ## License
 
