@@ -54,14 +54,14 @@ class GeminiBackend(BaseBackend):
 class _GeminiCli(CliBackend):
     def _cmd_create(self, user: str, system: str | None, model: str | None, system_mode: str) -> list[str]:
         prompt = f"System: {system}\n\nTask: {user}" if system else user
-        cmd = ["gemini", "-p", prompt, "-y", "-o", "stream-json"]
+        cmd = ["gemini", "-p", prompt, "-y", "--skip-trust", "-o", "stream-json"]
         if model:
             cmd.extend(["-m", model])
         return cmd
 
     def _cmd_resume(self, sid: str, user: str, system: str | None, model: str | None, system_mode: str) -> list[str]:
         prompt = f"System: {system}\n\nTask: {user}" if system else user
-        cmd = ["gemini", "-p", prompt, "-y", "-o", "stream-json", "-r", sid]
+        cmd = ["gemini", "-p", prompt, "-y", "--skip-trust", "-o", "stream-json", "-r", sid]
         if model:
             cmd.extend(["-m", model])
         return cmd
@@ -71,12 +71,10 @@ class _GeminiCli(CliBackend):
         if data is None:
             return (line, None)
         tp = data.get("type", "")
-        if tp == "system" and data.get("subtype") == "init":
+        if tp == "init":
             return (None, data.get("session_id") or None)
-        if tp == "assistant":
-            content = data.get("message", {}).get("content", [])
-            texts = [b.get("text", "") for b in content if isinstance(b, dict) and b.get("type") == "text"]
-            return ("".join(texts), data.get("session_id") or None)
+        if tp == "message" and data.get("role") == "assistant":
+            return (data.get("content", ""), None)
         if tp == "result":
-            return (None, data.get("session_id") or None)
+            return (None, None)
         return (None, None)

@@ -283,6 +283,7 @@ class BackendArgsTest(unittest.TestCase):
         prompt = cmd[cmd.index("-p") + 1]
         self.assertIn("System: sys", prompt)
         self.assertIn("-y", cmd)
+        self.assertIn("--skip-trust", cmd)
         self.assertIn("stream-json", cmd)
 
 
@@ -377,10 +378,17 @@ class BackendParseLineTest(unittest.TestCase):
 
     def test_gemini_init(self):
         from backends.gemini import _GeminiCli
-        line = json.dumps({"type": "system", "subtype": "init", "session_id": "gm-222"})
+        line = json.dumps({"type": "init", "session_id": "gm-222"})
         text, sid = _GeminiCli()._parse_line(line)
         self.assertIsNone(text)
         self.assertEqual(sid, "gm-222")
+
+    def test_gemini_assistant(self):
+        from backends.gemini import _GeminiCli
+        line = json.dumps({"type": "message", "role": "assistant", "content": "hello"})
+        text, sid = _GeminiCli()._parse_line(line)
+        self.assertEqual(text, "hello")
+        self.assertIsNone(sid)
 
     def test_non_json_line(self):
         text, sid = ClaudeBackend()._parse_line("plain text")

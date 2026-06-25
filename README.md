@@ -21,7 +21,7 @@ Agent Skills for dispatching tasks to AI coding agents across multiple backends.
 | `opencode` | `opencode` | CLI, ACP | inline | Tested |
 | `qwen` | `qwen` | CLI, ACP | native (append + overwrite) | Tested |
 | `kiro` | `kiro-cli` | CLI, ACP | inline | Untested |
-| `gemini` | `gemini` | CLI, ACP | inline | Untested |
+| `gemini` | `gemini` | CLI, ACP | inline | Tested |
 
 Backend and transport are auto-detected. Override with `--backend <name>` and `--transport cli|acp`.
 Use `--system-mode append` (default) or `--system-mode overwrite` to control how the agent's system prompt is applied.

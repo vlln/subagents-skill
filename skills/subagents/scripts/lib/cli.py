@@ -277,9 +277,9 @@ def _run_with_agent_json(
         task_status = "done" if exit_code == 0 else "failed"
         add_task(agent_name, session_name, task, task_status)
         complete(agent_name, session_name)
-        release(lock_path)
         emit.agent_done(session_name, exit_code=exit_code)
         emit.close()
+        release(lock_path)
         return exit_code
 
     if bg:
@@ -377,9 +377,9 @@ def _run_no_agent_json(
         task_status = "done" if exit_code == 0 else "failed"
         add_task(session_name, session_name, task, task_status)
         complete(session_name, session_name)
-        release(lock_path)
         emit.agent_done(session_name, exit_code=exit_code)
         emit.close()
+        release(lock_path)
         return exit_code
 
     if bg:
