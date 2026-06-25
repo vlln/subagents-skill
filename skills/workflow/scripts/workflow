@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+"""workflow — Multi-agent orchestration with pipeline, parallel, and phases.
+
+Usage:
+    workflow run <script.py> [--args '<json>']
+    workflow list
+    workflow status <run-id>
+
+The script must define:
+    meta = {"name": "...", "description": "...", "phases": [...]}
+    def run(agent, parallel, pipeline, phase, log, args): ...
+"""
+
+import json
+import sys
+from pathlib import Path
+
+_script_dir = Path(__file__).resolve().parent
+_lib_dir = _script_dir / "lib"
+sys.path.insert(0, str(_lib_dir))
+
+from runtime import agent, parallel, pipeline, phase, log  # noqa: E402
+
+
+def cmd_run(args: list[str]) -> None:
+    if not args:
+        print("Error: workflow run <script.py> [--args '<json>']", file=sys.stderr)
+        sys.exit(1)
+
+    script_path = Path(args[0])
+    if not script_path.is_file():
+        print(f"Error: script not found: {script_path}", file=sys.stderr)
+        sys.exit(1)
+
+    # Parse --args
+    wf_args: dict = {}
+    if "--args" in args:
+        idx = args.index("--args")
+        if idx + 1 < len(args):
+            try:
+                wf_args = json.loads(args[idx + 1])
+            except json.JSONDecodeError as e:
+                print(f"Error: invalid --args JSON: {e}", file=sys.stderr)
+                sys.exit(1)
+
+    # Load and execute the workflow script
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("workflow_script", script_path)
+    if spec is None or spec.loader is None:
+        print(f"Error: cannot load {script_path}", file=sys.stderr)
+        sys.exit(1)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    if not hasattr(mod, "run"):
+        print(f"Error: {script_path} must define a run() function", file=sys.stderr)
+        sys.exit(1)
+
+    meta = getattr(mod, "meta", {})
+    print(f"[workflow] {meta.get('name', script_path.name)} — {meta.get('description', '')}",
+          file=sys.stderr)
+
+    result = mod.run(agent=agent, parallel=parallel, pipeline=pipeline,
+                     phase=phase, log=log, args=wf_args)
+
+    if result is not None:
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+
+
+def cmd_list(args: list[str]) -> None:
+    print("Workflows: (list sessions via subagents list)", file=sys.stderr)
+
+
+def cmd_status(args: list[str]) -> None:
+    print("Status: (use subagents status <session>)", file=sys.stderr)
+
+
+def main() -> None:
+    args = sys.argv[1:]
+    if not args:
+        print("Usage: workflow <command> [args...]", file=sys.stderr)
+        print("  workflow run <script.py> [--args '<json>']", file=sys.stderr)
+        print("  workflow list", file=sys.stderr)
+        print("  workflow status <run-id>", file=sys.stderr)
+        sys.exit(1)
+
+    cmd = args.pop(0)
+    if cmd == "run":
+        cmd_run(args)
+    elif cmd == "list":
+        cmd_list(args)
+    elif cmd == "status":
+        cmd_status(args)
+    else:
+        print(f"Unknown command: {cmd}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

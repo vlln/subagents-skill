@@ -284,6 +284,7 @@ def _run_with_agent_json(
 
     if bg:
         output_file = _jsonl_output_path(session_name)
+        os.makedirs(os.path.dirname(output_file), exist_ok=True)
         file_emitter = JsonlEmitter(open(output_file, "w"))
         file_emitter.agent_start(session_name, agent=agent_name, backend=backend_name)
         emitter.close()
@@ -383,6 +384,7 @@ def _run_no_agent_json(
 
     if bg:
         output_file = _jsonl_output_path(session_name)
+        os.makedirs(os.path.dirname(output_file), exist_ok=True)
         file_emitter = JsonlEmitter(open(output_file, "w"))
         file_emitter.agent_start(session_name, backend=backend_name)
         emitter.close()
