@@ -49,11 +49,15 @@ BACKEND_MAP: dict[str, type[BaseBackend]] = {
 
 # ── JSONL output ──────────────────────────────────────────────────────────
 
+SCHEMA_VERSION = 1  # increment on breaking schema changes
+
+
 class JsonlEmitter:
     """Emits JSONL events to a file (stdout or a disk file)."""
 
     def __init__(self, file=None) -> None:
         self._file = file or sys.stdout
+        self.emit(type="version", version=SCHEMA_VERSION)
 
     def emit(self, **event) -> None:
         print(json.dumps(event, ensure_ascii=False), file=self._file, flush=True)

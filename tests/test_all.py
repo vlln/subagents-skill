@@ -108,7 +108,7 @@ class JsonlEmitterTest(unittest.TestCase):
 
     def test_agent_start(self):
         self._em.agent_start("s1", agent="rev", backend="kimi")
-        evt = self._lines()[0]
+        evt = self._lines()[1]  # [0] is version
         self.assertEqual(evt["type"], "agent_start")
         self.assertEqual(evt["session"], "s1")
         self.assertEqual(evt["agent"], "rev")
@@ -116,36 +116,36 @@ class JsonlEmitterTest(unittest.TestCase):
 
     def test_agent_start_no_agent(self):
         self._em.agent_start("s1", backend="claude")
-        evt = self._lines()[0]
+        evt = self._lines()[1]  # [0] is version
         self.assertIsNone(evt["agent"])
 
     def test_agent_text(self):
         self._em.agent_text("s1", "hello")
-        evt = self._lines()[0]
+        evt = self._lines()[1]  # [0] is version
         self.assertEqual(evt["type"], "agent_text")
         self.assertEqual(evt["content"], "hello")
 
     def test_agent_done(self):
         self._em.agent_done("s1", exit_code=0)
-        evt = self._lines()[0]
+        evt = self._lines()[1]  # [0] is version
         self.assertEqual(evt["type"], "agent_done")
         self.assertEqual(evt["exit_code"], 0)
 
     def test_agent_error(self):
         self._em.agent_error("s1", "something broke")
-        evt = self._lines()[0]
+        evt = self._lines()[1]  # [0] is version
         self.assertEqual(evt["type"], "agent_error")
         self.assertEqual(evt["error"], "something broke")
 
     def test_agent_list(self):
         self._em.agent_list([{"name": "r", "sessions": []}])
-        evt = self._lines()[0]
+        evt = self._lines()[1]  # [0] is version
         self.assertEqual(evt["type"], "agent_list")
         self.assertEqual(len(evt["agents"]), 1)
 
     def test_agent_status(self):
         self._em.agent_status("a", "s", "done", tasks=[{"prompt": "p", "status": "done"}])
-        evt = self._lines()[0]
+        evt = self._lines()[1]  # [0] is version
         self.assertEqual(evt["type"], "agent_status")
         self.assertEqual(evt["status"], "done")
         self.assertEqual(len(evt["tasks"]), 1)
@@ -155,8 +155,10 @@ class JsonlEmitterTest(unittest.TestCase):
         self._em.agent_text("s1", "hi")
         self._em.agent_done("s1")
         lines = self._lines()
-        self.assertEqual(len(lines), 3)
-        self.assertEqual([e["type"] for e in lines], ["agent_start", "agent_text", "agent_done"])
+        self.assertEqual(len(lines), 4)  # version + 3 events
+        self.assertEqual(lines[0]["type"], "version")
+        self.assertEqual(lines[0]["version"], 1)
+        self.assertEqual([e["type"] for e in lines[1:]], ["agent_start", "agent_text", "agent_done"])
 
 
 # ═══════════════════════════════════════════════════════════════════════════
