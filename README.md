@@ -2,11 +2,31 @@
 
 Agent Skills for dispatching tasks to AI coding agents across multiple backends.
 
+- **One interface, seven backends.** kimi, claude, codex, pi, opencode, qwen, and kiro — same `subagents run` command for all.
+- **Sessions persist.** Each run creates a named session. Resume it later and the agent remembers all prior context.
+- **Parallel swarms.** Run multiple agents in background with `--bg`, wait for all to finish with `subagents wait`.
+- **Auto-detection.** Backend and transport (CLI or [ACP](https://agentclientprotocol.com)) are auto-detected. Override with `--backend` and `--transport`.
+- **Zero dependencies.** Python 3.10+ standard library only. No pip install, no virtualenv.
+
+## Supported Backends
+
+| Backend | Command | Transports | Status |
+|---------|---------|-----------|--------|
+| `kimi` | `kimi` | CLI, ACP | Tested |
+| `claude` | `claude` | CLI | Tested |
+| `codex` | `codex` | CLI | Tested |
+| `pi` | `pi` | CLI | Tested |
+| `opencode` | `opencode` | CLI, ACP | Tested |
+| `qwen` | `qwen` | CLI, ACP | Tested |
+| `kiro` | `kiro-cli` | CLI, ACP | Untested |
+
+Backend and transport are auto-detected. Override with `--backend <name>` and `--transport cli|acp`.
+
 These skills follow the [Agent Skills specification](https://agentskills.io/specification) so they can be used by any skills-compatible agent, including Claude Code, Codex, and Open Code.
 
 ## Installation
 
-### skit
+### [skit](https://github.com/vlln/skit)
 
 ```bash
 skit install ./subagents-skills --all
