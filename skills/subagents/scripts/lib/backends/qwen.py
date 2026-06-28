@@ -8,7 +8,7 @@ from cli_backend import CliBackend
 
 
 class QwenBackend(BaseBackend):
-    def __init__(self, transport: str | None = None, text_handler=None):
+    def __init__(self, transport: str | None = None, text_handler=None, backend_name: str = "qwen"):
         use_acp = transport == "acp"
         self._th = text_handler
         if use_acp:
@@ -16,7 +16,7 @@ class QwenBackend(BaseBackend):
             self._cli = None
         else:
             self._acp = None
-            self._cli = _QwenCli(text_handler=text_handler)
+            self._cli = _QwenCli(text_handler=text_handler, backend_name=backend_name)
 
     def create_session(self, user: str, system: str | None = None, model: str | None = None, system_mode: str = "append") -> tuple[str, int]:
         if self._acp:

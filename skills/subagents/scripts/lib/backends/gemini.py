@@ -11,7 +11,7 @@ from utils import check_acp
 class GeminiBackend(BaseBackend):
     """Backend for gemini-cli. Tries ACP first, falls back to CLI."""
 
-    def __init__(self, transport: str | None = None, text_handler=None):
+    def __init__(self, transport: str | None = None, text_handler=None, backend_name: str = "gemini"):
         use_acp = transport == "acp" or (transport is None and check_acp("gemini"))
         if transport == "cli":
             use_acp = False
@@ -21,7 +21,7 @@ class GeminiBackend(BaseBackend):
             self._cli = None
         else:
             self._acp = None
-            self._cli = _GeminiCli(text_handler=text_handler)
+            self._cli = _GeminiCli(text_handler=text_handler, backend_name=backend_name)
 
     def create_session(self, user: str, system: str | None = None, model: str | None = None, system_mode: str = "append") -> tuple[str, int]:
         if self._acp:

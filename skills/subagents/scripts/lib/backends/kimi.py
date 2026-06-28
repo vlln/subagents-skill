@@ -16,7 +16,7 @@ _SESSION_ID_RE = re.compile(r"kimi -r (session_[a-f0-9-]+)")
 class KimiBackend(BaseBackend):
     """Backend for kimi-code. Tries ACP first, falls back to CLI."""
 
-    def __init__(self, transport: str | None = None, text_handler=None):
+    def __init__(self, transport: str | None = None, text_handler=None, backend_name: str = "kimi"):
         use_acp = transport == "acp" or (transport is None and check_acp("kimi"))
         if transport == "cli":
             use_acp = False
@@ -26,7 +26,7 @@ class KimiBackend(BaseBackend):
             self._cli = None
         else:
             self._acp = None
-            self._cli = _KimiCli(text_handler=text_handler)
+            self._cli = _KimiCli(text_handler=text_handler, backend_name=backend_name)
 
     def create_session(self, user: str, system: str | None = None, model: str | None = None, system_mode: str = "append") -> tuple[str, int]:
         if self._acp:

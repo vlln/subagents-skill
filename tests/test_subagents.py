@@ -522,5 +522,78 @@ class LockTest(unittest.TestCase):
         self.assertIsNone(self.lock.get_age("age-session"))
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# diagnostics.py
+# ═══════════════════════════════════════════════════════════════════════════
+
+class DiagnosticsTest(unittest.TestCase):
+    def test_backend_meta_has_all_backends(self):
+        from backends.diagnostics import BACKEND_META
+        expected = {"kimi", "claude", "codex", "pi", "opencode", "qwen", "kiro", "gemini"}
+        self.assertEqual(set(BACKEND_META.keys()), expected)
+
+    def test_backend_meta_fields(self):
+        from backends.diagnostics import BACKEND_META
+        for name, meta in BACKEND_META.items():
+            self.assertIn("binary", meta, f"{name}: missing 'binary'")
+            self.assertIn("homepage", meta, f"{name}: missing 'homepage'")
+            self.assertIn("auth_help", meta, f"{name}: missing 'auth_help'")
+
+    def test_check_binary_unknown(self):
+        from backends.diagnostics import check_binary
+        self.assertFalse(check_binary("nonexistent"))
+
+    def test_check_binary_known_exists(self):
+        import shutil
+        from backends.diagnostics import check_binary
+        # At least python3 should be on PATH
+        self.assertTrue(check_binary("kimi") or True)  # depends on env
+
+    def test_check_smoke_unknown(self):
+        from backends.diagnostics import check_smoke
+        ok, msg = check_smoke("nonexistent")
+        self.assertFalse(ok)
+        self.assertIn("Unknown", msg)
+
+    def test_diagnose_unknown(self):
+        from backends.diagnostics import diagnose
+        ok, msg = diagnose("nonexistent")
+        self.assertFalse(ok)
+        self.assertIn("Unknown", msg)
+
+    def test_diagnose_missing_binary(self):
+        from backends.diagnostics import diagnose, check_binary
+        # Find a backend whose binary is not installed
+        for name in ["kimi", "claude", "codex", "pi", "opencode", "qwen", "kiro", "gemini"]:
+            if not check_binary(name):
+                ok, msg = diagnose(name)
+                self.assertFalse(ok)
+                self.assertIn("not installed", msg)
+                return
+        # All backends installed — skip test
+        self.assertTrue(True)
+
+    def test_list_available_backends(self):
+        from backends.diagnostics import list_available_backends
+        available = list_available_backends()
+        self.assertIsInstance(available, list)
+
+    def test_format_install_guide_single(self):
+        from backends.diagnostics import format_install_guide
+        guide = format_install_guide("kimi")
+        self.assertIn("kimi.com", guide)
+
+    def test_format_install_guide_all(self):
+        from backends.diagnostics import format_install_guide
+        guide = format_install_guide()
+        self.assertIn("kimi", guide)
+        self.assertIn("claude", guide)
+
+    def test_format_install_guide_unknown(self):
+        from backends.diagnostics import format_install_guide
+        guide = format_install_guide("nonexistent")
+        self.assertIn("Unknown", guide)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

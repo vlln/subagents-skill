@@ -100,11 +100,20 @@ def _make_text_handler(emitter: JsonlEmitter, session: str) -> Callable[[str], N
 # ── backend helpers ───────────────────────────────────────────────────────
 
 def _detect_backend() -> str:
-    import shutil
-    for name in ["kimi", "kiro-cli", "claude", "codex", "pi", "gemini"]:
-        if shutil.which(name):
-            return "kiro" if name == "kiro-cli" else name
-    return "kimi"
+    from backends.diagnostics import BACKEND_META, list_available_backends, format_install_guide
+
+    available = list_available_backends()
+    if available:
+        print(f"[subagents] Detected backends: {', '.join(available)}", file=sys.stderr)
+        return available[0]
+
+    # No backends found — give the user clear guidance
+    print("[subagents] No agent backends found on PATH.", file=sys.stderr)
+    print(file=sys.stderr)
+    print(format_install_guide(), file=sys.stderr)
+    print(file=sys.stderr)
+    print("Then run: subagents run --backend <name> <session> <prompt>", file=sys.stderr)
+    sys.exit(1)
 
 
 def _make_backend(
@@ -120,12 +129,31 @@ def _make_backend(
         print(f"Available backends: {', '.join(BACKEND_MAP.keys())}", file=sys.stderr)
         sys.exit(1)
     import inspect
+    from backends.diagnostics import check_binary, check_smoke
+
+    # Pre-flight: check that the binary is available
+    if not check_binary(backend_name):
+        from backends.diagnostics import print_diagnostics
+        print_diagnostics(backend_name)
+        sys.exit(1)
+
+    # Smoke test: warn if the binary seems broken (but don't abort)
+    ok, msg = check_smoke(backend_name)
+    if not ok:
+        print(f"[subagents] Warning: {msg}", file=sys.stderr)
+        from backends.diagnostics import BACKEND_META
+        meta = BACKEND_META.get(backend_name, {})
+        if meta.get("auth_help"):
+            print(f"[subagents]   {meta['auth_help']}", file=sys.stderr)
+
     sig = inspect.signature(cls)
     kwargs: dict = {}
     if "transport" in sig.parameters:
         kwargs["transport"] = transport
     if "text_handler" in sig.parameters:
         kwargs["text_handler"] = text_handler
+    if "backend_name" in sig.parameters:
+        kwargs["backend_name"] = backend_name
     return cls(**kwargs)
 
 

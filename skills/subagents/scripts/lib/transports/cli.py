@@ -15,8 +15,9 @@ class CliTransport:
     optional callbacks, and returns the exit code.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, backend_name: str | None = None) -> None:
         self._proc: subprocess.Popen | None = None
+        self._backend_name = backend_name
 
     def run(
         self,
@@ -46,9 +47,14 @@ class CliTransport:
                 text=True,
             )
         except FileNotFoundError:
+            install_guide = ""
+            if self._backend_name:
+                from backends.diagnostics import format_install_guide
+                install_guide = "\n" + format_install_guide(self._backend_name)
             raise RuntimeError(
                 f"Command not found: {args[0]}\n"
                 f"Please install '{args[0]}' or use a different backend with --backend <name>."
+                f"{install_guide}"
             ) from None
 
         assert self._proc.stdout is not None

@@ -54,13 +54,19 @@ class AcpTransport:
         if self._proc is not None:
             return
 
-        self._proc = subprocess.Popen(
-            self._command,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-        )
+        try:
+            self._proc = subprocess.Popen(
+                self._command,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+            )
+        except FileNotFoundError:
+            raise RuntimeError(
+                f"Command not found: {self._command[0]}\n"
+                f"Please install '{self._command[0]}' or use a different backend with --backend <name>."
+            ) from None
         self._initialize()
 
     def _initialize(self) -> None:

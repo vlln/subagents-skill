@@ -28,8 +28,8 @@ class CliBackend(BaseBackend):
 
     _sid_on_stderr: ClassVar[bool] = False
 
-    def __init__(self, text_handler: Callable[[str], None] | None = None) -> None:
-        self._transport = CliTransport()
+    def __init__(self, text_handler: Callable[[str], None] | None = None, backend_name: str | None = None) -> None:
+        self._transport = CliTransport(backend_name=backend_name)
         self._text_handler = text_handler
 
     @abstractmethod
