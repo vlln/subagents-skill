@@ -266,7 +266,7 @@ class DisplayTest(unittest.TestCase):
             self.assertEqual(self._display._agents[0]["status"], "skipped")
 
     def test_set_total_phases(self):
-        self._display.set_total_phases(3)
+        self._display.set_phases([{"title": "A"}, {"title": "B"}, {"title": "C"}])
         self.assertEqual(self._display._total_phases, 3)
 
     def test_summary_renders(self):

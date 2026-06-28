@@ -75,10 +75,26 @@ class Display:
 
     # ── state tracking ──────────────────────────────────────────────────
 
-    def set_total_phases(self, n: int) -> None:
-        """Pre-set total phase count for progress display (e.g. Phase 1/3)."""
+    def set_phases(self, phases: list[dict]) -> None:
+        """Pre-declare all phases and their tasks for full-tree display."""
         with self._lock:
-            self._total_phases = n
+            self._total_phases = len(phases)
+            for ph in phases:
+                self._phases.append({
+                    "title": ph["title"],
+                    "status": "pending",
+                    "start_time": 0.0,
+                    "end_time": 0.0,
+                })
+                for task in ph.get("tasks", []):
+                    self._agents.append({
+                        "label": task,
+                        "prompt": "",
+                        "phase": ph["title"],
+                        "status": "pending",
+                        "start_time": 0.0,
+                        "elapsed": 0.0,
+                    })
 
     def phase(self, title: str) -> None:
         with self._lock:
@@ -88,26 +104,43 @@ class Display:
                 if prev["status"] == "running":
                     prev["status"] = "done"
                     prev["end_time"] = time.time()
-            self._phases.append({
-                "title": title,
-                "status": "running",
-                "start_time": time.time(),
-                "end_time": 0.0,
-            })
+            # Find and activate the matching pre-declared phase
+            for ph in self._phases:
+                if ph["title"] == title and ph["status"] == "pending":
+                    ph["status"] = "running"
+                    ph["start_time"] = time.time()
+                    break
+            else:
+                # No pre-declared match — create new
+                self._phases.append({
+                    "title": title,
+                    "status": "running",
+                    "start_time": time.time(),
+                    "end_time": 0.0,
+                })
         if not self._enabled:
             self._emit_status()
 
     def agent_start(self, label: str, prompt: str = "") -> None:
         with self._lock:
-            phase_title = self._phases[-1]["title"] if self._phases else ""
-            self._agents.append({
-                "label": label,
-                "prompt": prompt,
-                "phase": phase_title,
-                "status": "running",
-                "start_time": time.time(),
-                "elapsed": 0.0,
-            })
+            # Find and activate the matching pre-declared agent
+            for a in self._agents:
+                if a["label"] == label and a["status"] == "pending":
+                    a["status"] = "running"
+                    a["start_time"] = time.time()
+                    a["prompt"] = prompt
+                    break
+            else:
+                # No pre-declared match — create new
+                phase_title = self._phases[-1]["title"] if self._phases else ""
+                self._agents.append({
+                    "label": label,
+                    "prompt": prompt,
+                    "phase": phase_title,
+                    "status": "running",
+                    "start_time": time.time(),
+                    "elapsed": 0.0,
+                })
         if not self._enabled:
             self._emit_status()
 

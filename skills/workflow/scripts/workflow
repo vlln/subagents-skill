@@ -93,7 +93,7 @@ def cmd_run(args: list[str]) -> None:
         run_id=run_id,
     )
     if meta.get("phases"):
-        display.set_total_phases(len(meta["phases"]))
+        display.set_phases(meta["phases"])
     set_display(display)
     display.start_auto_refresh()
 
@@ -138,7 +138,7 @@ def cmd_resume(args: list[str]) -> None:
         run_id=run_id,
     )
     if meta.get("phases"):
-        display.set_total_phases(len(meta["phases"]))
+        display.set_phases(meta["phases"])
     set_display(display)
     display.start_auto_refresh()
 
