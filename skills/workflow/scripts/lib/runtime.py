@@ -31,12 +31,13 @@ def _outputs_dir() -> str:
     return os.path.join(agents_dir, "outputs")
 
 
-def _run_subagent(prompt: str, session: str) -> list[dict]:
+def _run_subagent(prompt: str, session: str, backend: str | None = None) -> list[dict]:
     sub = _subagents_path()
-    subprocess.run(
-        [sub, "run", "--bg", "--output", "json", session, prompt],
-        check=True, capture_output=True,
-    )
+    cmd = [sub, "run", "--bg", "--output", "json"]
+    if backend:
+        cmd.extend(["--backend", backend])
+    cmd.extend([session, prompt])
+    subprocess.run(cmd, check=True, capture_output=True)
     result = subprocess.run(
         [sub, "wait", "--output", "json", session],
         capture_output=True, text=True, check=True,
@@ -161,6 +162,7 @@ def agent(
     schema: dict | None = None,
     label: str | None = None,
     model: str | None = None,
+    backend: str | None = None,
 ) -> Any:
     session = _ctx.next_session()
     log_prefix = f"[{label}] " if label else ""
@@ -191,7 +193,7 @@ def agent(
         text, exit_code = _run_mock(prompt)
         elapsed = time.time() - t0
     else:
-        events = _run_subagent(prompt, session)
+        events = _run_subagent(prompt, session, backend=backend)
         elapsed = time.time() - t0
         exit_code = _extract_exit_code(events)
         text = _extract_text(events) if exit_code == 0 else ""

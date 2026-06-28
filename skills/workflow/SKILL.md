@@ -135,13 +135,16 @@ def run(agent, parallel, pipeline, phase, log, args):
 
 ## API Reference
 
-### agent(prompt, *, schema=None, label=None, model=None)
+### agent(prompt, *, schema=None, label=None, model=None, backend=None)
 
 Run a single subagent. Returns text output, or structured dict if `schema` is provided.
 
 ```python
 # Simple text
 result = agent("Find all test files")
+
+# With a specific backend
+result = agent("Review for security", backend="claude")
 
 # Structured output
 result = agent("Find all test files", schema={
