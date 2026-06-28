@@ -98,20 +98,19 @@ class Display:
 
     def phase(self, title: str) -> None:
         with self._lock:
-            # Mark previous phase as done
-            if self._phases:
-                prev = self._phases[-1]
-                if prev["status"] == "running":
-                    prev["status"] = "done"
-                    prev["end_time"] = time.time()
-            # Find and activate the matching pre-declared phase
+            # Mark any currently running phase as done
+            for ph in self._phases:
+                if ph["status"] == "running":
+                    ph["status"] = "done"
+                    ph["end_time"] = time.time()
+                    break
+            # Find and activate the matching pre-declared/next phase
             for ph in self._phases:
                 if ph["title"] == title and ph["status"] == "pending":
                     ph["status"] = "running"
                     ph["start_time"] = time.time()
                     break
             else:
-                # No pre-declared match — create new
                 self._phases.append({
                     "title": title,
                     "status": "running",
@@ -151,8 +150,7 @@ class Display:
                     a["status"] = "done" if success else "failed"
                     a["elapsed"] = elapsed
                     break
-        if not self._enabled:
-            self._emit_status()
+        # Don't emit here — stop() handles final render
 
     def agent_skip(self, label: str) -> None:
         with self._lock:
@@ -320,21 +318,26 @@ class Display:
             self._refresh_thread.start()
 
     def stop(self) -> None:
-        """Stop auto-refresh, draw final frame, show cursor."""
+        """Stop auto-refresh, draw final frame (TTY) or tree (non-TTY)."""
         self._running = False
         if self._refresh_thread:
             self._refresh_thread.join(timeout=1.0)
-        # Force last running phase to done for final render
+        # Force any running phase to done
         with self._lock:
-            if self._phases and self._phases[-1]["status"] == "running":
-                self._phases[-1]["status"] = "done"
-                self._phases[-1]["end_time"] = time.time()
+            for ph in self._phases:
+                if ph["status"] == "running":
+                    ph["status"] = "done"
+                    ph["end_time"] = time.time()
         if self._enabled:
             if self._last_line_count > 0:
                 sys.stderr.write(f"\033[{self._last_line_count}A")
             sys.stderr.write(self._render())
             sys.stderr.write(_CLEAR_BELOW)
             sys.stderr.write(_CURSOR_SHOW)
+            sys.stderr.write("\n")
+            sys.stderr.flush()
+        else:
+            sys.stderr.write(self._render())
             sys.stderr.write("\n")
             sys.stderr.flush()
 
