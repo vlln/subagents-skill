@@ -11,9 +11,7 @@ from typing import Any
 
 _CURSOR_HIDE = "\033[?25l"
 _CURSOR_SHOW = "\033[?25h"
-_CURSOR_HOME = "\033[H"
 _CLEAR_BELOW = "\033[0J"
-_CLEAR_LINE = "\033[K"
 _RESET = "\033[0m"
 _BOLD = "\033[1m"
 _DIM = "\033[2m"
@@ -73,6 +71,7 @@ class Display:
         self._enabled = sys.stderr.isatty()
         self._total_phases = 0
         self._last_status = ""  # debounce: skip duplicate status lines
+        self._last_line_count = 0  # for cursor-up repositioning
 
     # ── state tracking ──────────────────────────────────────────────────
 
@@ -192,11 +191,16 @@ class Display:
 
     def _draw(self) -> None:
         self._spinner_idx += 1
-        sys.stderr.write(_CURSOR_HOME)
-        sys.stderr.write(self._render())
+        rendered = self._render()
+        line_count = rendered.count("\n") + 1
+        if self._last_line_count > 0:
+            # Move cursor back up to panel start
+            sys.stderr.write(f"\033[{self._last_line_count}A")
+        sys.stderr.write(rendered)
         sys.stderr.write(_CLEAR_BELOW)
         sys.stderr.write("\n")
         sys.stderr.flush()
+        self._last_line_count = line_count
 
     def _pad_line(self, line: str) -> str:
         """Pad a content line to fill the panel width, accounting for ANSI codes."""
@@ -258,7 +262,8 @@ class Display:
         if self._refresh_thread:
             self._refresh_thread.join(timeout=1.0)
         if self._enabled:
-            sys.stderr.write(_CURSOR_HOME)
+            if self._last_line_count > 0:
+                sys.stderr.write(f"\033[{self._last_line_count}A")
             sys.stderr.write(self._render())
             sys.stderr.write(_CLEAR_BELOW)
             sys.stderr.write(_CURSOR_SHOW)
