@@ -11,6 +11,8 @@ from typing import Any
 
 _CURSOR_HIDE = "\033[?25l"
 _CURSOR_SHOW = "\033[?25h"
+_ALT_SCREEN = "\033[?1049h"
+_EXIT_ALT_SCREEN = "\033[?1049l"
 _CLEAR = "\033[2J\033[H"
 _CLEAR_LINE = "\033[K"
 _RESET = "\033[0m"
@@ -158,12 +160,11 @@ class Display:
                     p_elapsed = _fmt_elapsed(time.time() - ph["start_time"])
 
                 title = f" Phase {phase_num}: {ph['title']}" if phase_num else f" Phase: {ph['title']}"
-                line = f"│  {icon} {title}"
+                line = f"  {icon} {title}"
                 if p_elapsed:
                     line += f"  {_DIM}{p_elapsed}{_RESET}"
-                lines.append(line)
+                lines.append(self._pad_line(line))
 
-                # Agents in this phase
                 phase_agents = [a for a in self._agents if a["phase"] == ph["title"]]
                 for ai, a in enumerate(phase_agents):
                     is_last = ai == len(phase_agents) - 1
@@ -175,12 +176,12 @@ class Display:
                     elif a["status"] == "running":
                         a_elapsed = _fmt_elapsed(time.time() - a["start_time"])
 
-                    a_line = f"│ {prefix} {a_icon} {a['label']}"
+                    a_line = f" {prefix} {a_icon} {a['label']}"
                     if a_elapsed:
                         a_line += f"  {_DIM}{a_elapsed}{_RESET}"
                     if a["status"] == "failed":
                         a_line += f"  {_RED}failed{_RESET}"
-                    lines.append(a_line)
+                    lines.append(self._pad_line(a_line))
 
                 if phase_agents:
                     lines.append(f"│{' ' * self._width}│")
@@ -196,6 +197,14 @@ class Display:
         sys.stderr.write(self._render())
         sys.stderr.write("\n")
         sys.stderr.flush()
+
+    def _pad_line(self, line: str) -> str:
+        """Pad a content line to fill the panel width, accounting for ANSI codes."""
+        visible = len(_strip_ansi(line))
+        pad = self._width - visible
+        if pad > 0:
+            return f"│{line}{' ' * pad}│"
+        return f"│{line}│"
 
     def _emit_status(self) -> None:
         """Non-TTY: print one compact status line on state change."""
@@ -230,10 +239,12 @@ class Display:
         only on state changes (phase/agent_start/agent_done).
         """
         if self._enabled:
+            sys.stderr.write(_ALT_SCREEN)
             sys.stderr.write(_CURSOR_HIDE)
             sys.stderr.flush()
-            self._running = True
+        self._running = True
 
+        if self._enabled:
             def _refresh() -> None:
                 while self._running:
                     self._draw()
@@ -243,19 +254,14 @@ class Display:
             self._refresh_thread.start()
 
     def stop(self) -> None:
-        """Stop auto-refresh, show cursor, print summary."""
+        """Stop auto-refresh, exit alt screen, show cursor."""
         self._running = False
         if self._refresh_thread:
             self._refresh_thread.join(timeout=1.0)
         if self._enabled:
-            # Final redraw with final state
             sys.stderr.write(_CLEAR)
             sys.stderr.write(self._render())
-            sys.stderr.write("\n\n")
-            sys.stderr.write(_CURSOR_SHOW)
-            sys.stderr.flush()
-            sys.stderr.write(self._render())
-            sys.stderr.write("\n\n")
+            sys.stderr.write(_EXIT_ALT_SCREEN)
             sys.stderr.write(_CURSOR_SHOW)
             sys.stderr.flush()
 
