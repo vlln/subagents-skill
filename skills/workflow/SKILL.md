@@ -248,36 +248,7 @@ if flaws:
 
 ## Monitoring
 
-### Live Display
-
-During execution, workflow renders a live status panel (TTY) or compact status lines (non-TTY):
-
-```
-[workflow] code-review (wf_a3f2) 0.0s | ⠙ Scan
-[workflow] code-review (wf_a3f2) 1.5s | ✓ Scan | ⠼ Review
-[workflow] code-review (wf_a3f2) 4.3s | ✓ Scan | ✓ Review | ⠸ Synthesize
-```
-
-On completion, a summary table is printed:
-
-```
-══ Workflow Summary: code-review ══
-
-  Duration: 5.3s    Phases: 3    Sessions: 6
-  ✓ 5 done    ✗ 1 failed    ○ 0 skipped
-
-  ✓ Scan  1.5s
-     ✓ Scan files  1.5s
-
-  ✓ Review  2.8s  (1 failed)
-     ✓ Security review  1.0s
-     ✗ Performance review  2.3s
-     ✓ Style review  1.5s
-     ✓ Architecture review  2.8s
-
-  ✓ Synthesize  1.0s
-     ✓ Synthesize  1.0s
-```
+Workflow prints live progress to stderr during execution, and a summary table on completion.
 
 ### CLI Commands
 
