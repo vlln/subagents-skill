@@ -3,17 +3,14 @@
 from __future__ import annotations
 
 import sys
-import threading
 import time
+import threading
 from typing import Any
 
 # ── ANSI helpers ────────────────────────────────────────────────────────────
 
 _CURSOR_HIDE = "\033[?25l"
 _CURSOR_SHOW = "\033[?25h"
-_CURSOR_SAVE = "\033[s"
-_CURSOR_RESTORE = "\033[u"
-_CLEAR_BELOW = "\033[J"
 _RESET = "\033[0m"
 _BOLD = "\033[1m"
 _DIM = "\033[2m"
@@ -68,8 +65,6 @@ class Display:
         self._agents: list[dict[str, Any]] = []
         self._start_time = time.time()
         self._spinner_idx = 0
-        self._refresh_thread: threading.Thread | None = None
-        self._running = False
         self._enabled = sys.stderr.isatty()
         self._total_phases = 0
         self._last_status = ""  # debounce: skip duplicate status lines
@@ -190,13 +185,6 @@ class Display:
 
             return "\n".join(lines)
 
-    def _draw(self) -> None:
-        self._spinner_idx += 1
-        sys.stderr.write(_CURSOR_RESTORE)
-        sys.stderr.write(self._render())
-        sys.stderr.write(_CLEAR_BELOW)
-        sys.stderr.flush()
-
     def _pad_line(self, line: str) -> str:
         """Pad a content line to fill the panel width, accounting for ANSI codes."""
         visible = len(_strip_ansi(line))
@@ -231,37 +219,25 @@ class Display:
     # ── lifecycle ───────────────────────────────────────────────────────
 
     def start_auto_refresh(self, interval: float = 0.3) -> None:
-        """Start live panel refresh. Saves cursor position for in-place updates."""
+        """Draw initial panel (TTY) or nothing (non-TTY)."""
         if self._enabled:
             sys.stderr.write(_CURSOR_HIDE)
-            sys.stderr.write(_CURSOR_SAVE)
             sys.stderr.write(self._render())
-            sys.stderr.write(_CLEAR_BELOW)
+            sys.stderr.write("\n")
             sys.stderr.flush()
-            self._running = True
-
-            def _refresh() -> None:
-                while self._running:
-                    self._draw()
-                    time.sleep(interval)
-
-            self._refresh_thread = threading.Thread(target=_refresh, daemon=True)
-            self._refresh_thread.start()
 
     def stop(self) -> None:
-        """Stop refresh, draw final panel (TTY) or summary (non-TTY)."""
-        self._running = False
-        if self._refresh_thread:
-            self._refresh_thread.join(timeout=1.0)
+        """Draw final panel (TTY) or summary (non-TTY)."""
         if self._enabled:
-            sys.stderr.write(_CURSOR_RESTORE)
             sys.stderr.write(self._render())
-            sys.stderr.write(_CLEAR_BELOW)
             sys.stderr.write(_CURSOR_SHOW)
             sys.stderr.write("\n")
             sys.stderr.flush()
         else:
             sys.stderr.write("\n")
+            sys.stderr.write(self.summary())
+            sys.stderr.write("\n")
+            sys.stderr.flush()
             sys.stderr.write(self.summary())
             sys.stderr.write("\n")
             sys.stderr.flush()
