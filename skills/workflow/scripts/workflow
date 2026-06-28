@@ -71,20 +71,14 @@ def _parse_flags(args: list[str]) -> tuple[dict, str | None, bool]:
 
 
 def _discover_topology(mod, wf_args: dict) -> list[dict]:
-    """Run the workflow with stub functions to discover phases and tasks."""
-    phases: list[dict] = []
-    current_tasks: list[str] = []
+    """Run the workflow with stub functions to discover phases only."""
+    phases: list[str] = []
 
     def _stub_phase(title: str) -> None:
-        nonlocal current_tasks
-        if current_tasks:
-            phases[-1]["tasks"] = current_tasks
-        phases.append({"title": title})
-        current_tasks = []
+        phases.append(title)
 
     def _stub_agent(prompt: str, *, schema=None, label=None, model=None, backend=None) -> str:
-        current_tasks.append(label or prompt[:40])
-        return ""  # return empty string for safe chaining
+        return ""
 
     def _stub_parallel(thunks):
         results = []
@@ -122,11 +116,9 @@ def _discover_topology(mod, wf_args: dict) -> list[dict]:
             phase=_stub_phase, log=_stub_log, args=wf_args, workflow=_stub_workflow,
         )
     except Exception:
-        pass  # dry-run may fail on real data, topology is still collected
+        pass
 
-    if current_tasks:
-        phases[-1]["tasks"] = current_tasks
-    return phases
+    return [{"title": t} for t in phases]
 
 
 def cmd_run(args: list[str]) -> None:

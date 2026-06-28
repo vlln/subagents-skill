@@ -122,7 +122,7 @@ class Display:
 
     def agent_start(self, label: str, prompt: str = "") -> None:
         with self._lock:
-            # Find and activate the matching pre-declared agent
+            # Find and activate matching pre-declared agent
             for a in self._agents:
                 if a["label"] == label and a["status"] == "pending":
                     a["status"] = "running"
@@ -130,8 +130,12 @@ class Display:
                     a["prompt"] = prompt
                     break
             else:
-                # No pre-declared match — create new
-                phase_title = self._phases[-1]["title"] if self._phases else ""
+                # Find current running phase
+                phase_title = ""
+                for ph in self._phases:
+                    if ph["status"] == "running":
+                        phase_title = ph["title"]
+                        break
                 self._agents.append({
                     "label": label,
                     "prompt": prompt,
