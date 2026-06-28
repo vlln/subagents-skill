@@ -266,28 +266,20 @@ class Display:
             lines: list[str] = []
 
             # Header
-            lines.append(f"┌{'─' * self._width}┐")
-            header = f"  {_BOLD}Workflow Summary: {self._name}{_RESET}"
-            lines.append(f"│{header}{' ' * (self._width - len(header) + 2)}│")
-            lines.append(f"├{'─' * self._width}┤")
+            lines.append(f"{_BOLD}══ Workflow Summary: {self._name} ══{_RESET}")
+            lines.append("")
 
             # Stats
             done = sum(1 for a in self._agents if a["status"] == "done")
             failed = sum(1 for a in self._agents if a["status"] == "failed")
             skipped = sum(1 for a in self._agents if a["status"] == "skipped")
-            stats = (
-                f"  Duration: {_fmt_elapsed(elapsed)}    "
-                f"Phases: {len(self._phases)}    "
-                f"Sessions: {len(self._agents)}"
-            )
-            lines.append(f"│{stats}{' ' * (self._width - len(stats) + 2)}│")
-            marks = (
-                f"  {_GREEN}✓{_RESET} {done} done    "
-                f"{_RED}✗{_RESET} {failed} failed    "
-                f"{_DIM}○{_RESET} {skipped} skipped"
-            )
-            lines.append(f"│{marks}{' ' * (self._width - len(marks) + 2)}│")
-            lines.append(f"├{'─' * self._width}┤")
+            lines.append(f"  Duration: {_fmt_elapsed(elapsed)}    "
+                         f"Phases: {len(self._phases)}    "
+                         f"Sessions: {len(self._agents)}")
+            lines.append(f"  {_GREEN}✓{_RESET} {done} done    "
+                         f"{_RED}✗{_RESET} {failed} failed    "
+                         f"{_DIM}○{_RESET} {skipped} skipped")
+            lines.append("")
 
             # Phases detail
             for ph in self._phases:
@@ -307,14 +299,15 @@ class Display:
                 if phase_failed > 0:
                     extra = f"  ({phase_failed} failed)"
 
-                p_line = f"  {icon} Phase: {ph['title']}  {_DIM}{p_elapsed}{_RESET}{extra}"
-                lines.append(f"│{p_line}{' ' * (self._width - len(p_line) + 2)}│")
+                p_line = f"  {icon} {ph['title']}  {_DIM}{p_elapsed}{_RESET}{extra}"
+                lines.append(p_line)
 
                 for a in phase_agents:
                     a_icon = _status_icon(a["status"], 0)
                     a_elapsed = _fmt_elapsed(a["elapsed"])
                     a_line = f"     {a_icon} {a['label']}  {_DIM}{a_elapsed}{_RESET}"
-                    lines.append(f"│{a_line}{' ' * (self._width - len(a_line) + 2)}│")
+                    lines.append(a_line)
 
-            lines.append(f"└{'─' * self._width}┘")
+                lines.append("")
+
             return "\n".join(lines)
