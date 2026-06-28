@@ -117,7 +117,7 @@ meta = {
     ],
 }
 
-def run(agent, parallel, pipeline, phase, log, args):
+def run(agent, parallel, pipeline, phase, log, args, workflow):
     phase("Scan")
     files = agent("List changed files in git diff")
 
@@ -138,6 +138,14 @@ def run(agent, parallel, pipeline, phase, log, args):
 ### agent(prompt, *, schema=None, label=None, model=None, backend=None)
 
 Run a single subagent. Returns text output, or structured dict if `schema` is provided.
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `prompt` | `str` | The task to run |
+| `schema` | `dict` | Optional JSON Schema for structured output |
+| `label` | `str` | Display label in the live panel |
+| `model` | `str` | Override the model |
+| `backend` | `str` | Override the backend (e.g. `"claude"`, `"kimi"`) |
 
 ```python
 # Simple text
@@ -205,8 +213,8 @@ log(f"Processing {len(items)} files")
 ```python
 phase("Analyze")
 results = parallel([
-    lambda: agent("Check security"),
-    lambda: agent("Check performance"),
+    lambda: agent("Check security", backend="claude"),
+    lambda: agent("Check performance", backend="kimi"),
 ])
 
 phase("Summarize")
@@ -240,6 +248,39 @@ if flaws:
 
 ## Monitoring
 
+### Live Display
+
+During execution, workflow renders a live status panel (TTY) or compact status lines (non-TTY):
+
+```
+[workflow] code-review (wf_a3f2) 0.0s | ⠙ Scan
+[workflow] code-review (wf_a3f2) 1.5s | ✓ Scan | ⠼ Review
+[workflow] code-review (wf_a3f2) 4.3s | ✓ Scan | ✓ Review | ⠸ Synthesize
+```
+
+On completion, a summary table is printed:
+
+```
+══ Workflow Summary: code-review ══
+
+  Duration: 5.3s    Phases: 3    Sessions: 6
+  ✓ 5 done    ✗ 1 failed    ○ 0 skipped
+
+  ✓ Scan  1.5s
+     ✓ Scan files  1.5s
+
+  ✓ Review  2.8s  (1 failed)
+     ✓ Security review  1.0s
+     ✗ Performance review  2.3s
+     ✓ Style review  1.5s
+     ✓ Architecture review  2.8s
+
+  ✓ Synthesize  1.0s
+     ✓ Synthesize  1.0s
+```
+
+### CLI Commands
+
 ```bash
 # List all workflow runs with session status
 scripts/workflow list
@@ -257,11 +298,27 @@ scripts/workflow stop abc123
 # Stopped 1 session(s) in run 'abc123'.
 ```
 
+## Mock Mode (Testing)
+
+For testing without a real backend, enable mock mode at the top of your workflow script:
+
+```python
+from runtime import set_mock
+set_mock("shell")
+
+# agent() now executes the prompt as a shell command
+agent("echo security ok")          # → "security ok"
+agent("sleep 2 && echo done")      # → "done" (2s delay)
+```
+
+Set `set_mock(None)` to restore real subagent execution.
+
 ## Rules
 
 - Each `agent()` call creates a session via `subagents run --bg --output json`.
+- Use `backend` to select a specific backend per agent: `agent("...", backend="claude")`.
 - Sessions are named `wf_<uuid>` and cleaned up automatically.
 - `parallel()` uses threads; all agents run concurrently.
 - `pipeline()` has no inter-stage barrier — items flow independently.
 - Return `None` from `run()` to suppress JSON output.
-- Diagnostics go to stderr; workflow output goes to stdout.
+- Diagnostics and live display go to stderr; workflow output goes to stdout.
