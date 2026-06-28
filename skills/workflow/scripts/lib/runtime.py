@@ -125,6 +125,34 @@ def get_display() -> Any:
     return _display
 
 
+# ── mock agent ────────────────────────────────────────────────────────────
+
+_mock_mode: str | None = None  # None | "shell" | "echo"
+
+
+def set_mock(mode: str | None = "shell") -> None:
+    """Enable mock agent mode for testing without a real backend.
+
+    In shell mode, the prompt is executed as a shell command and stdout is
+    returned. This lets workflow tests and demos run without real subagents.
+    """
+    global _mock_mode
+    _mock_mode = mode
+
+
+def _run_mock(prompt: str) -> tuple[str, int]:
+    """Run prompt as shell command, return (stdout, exit_code)."""
+    try:
+        result = subprocess.run(
+            prompt, shell=True, capture_output=True, text=True, timeout=30,
+        )
+        return result.stdout.strip(), result.returncode
+    except subprocess.TimeoutExpired:
+        return "", 1
+    except Exception:
+        return "", 1
+
+
 # ── public API ───────────────────────────────────────────────────────────
 
 def agent(
@@ -158,17 +186,21 @@ def agent(
         _display.agent_start(display_label, prompt)
 
     t0 = time.time()
-    events = _run_subagent(prompt, session)
-    elapsed = time.time() - t0
-    exit_code = _extract_exit_code(events)
+
+    if _mock_mode:
+        text, exit_code = _run_mock(prompt)
+        elapsed = time.time() - t0
+    else:
+        events = _run_subagent(prompt, session)
+        elapsed = time.time() - t0
+        exit_code = _extract_exit_code(events)
+        text = _extract_text(events) if exit_code == 0 else ""
 
     if exit_code != 0:
         log(f"{log_prefix}failed (exit {exit_code})")
         if _display:
             _display.agent_done(display_label, success=False, elapsed=elapsed)
         return None
-
-    text = _extract_text(events)
 
     if schema:
         try:
