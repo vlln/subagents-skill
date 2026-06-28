@@ -136,15 +136,12 @@ class Display:
             lines: list[str] = []
 
             # Header
-            header = f" Workflow: {self._name}"
+            header = f"══ Workflow: {self._name}"
             if self._run_id:
                 header += f" ({self._run_id})"
-            right = f"{_fmt_elapsed(elapsed)} "
-            pad = self._width - len(header) - len(right) - 2
-            if pad > 0:
-                header += " " * pad + right
-            lines.append(f"┌{header}┐")
-            lines.append(f"│{' ' * self._width}│")
+            header += f"  {_fmt_elapsed(elapsed)}"
+            lines.append(_BOLD + header + _RESET)
+            lines.append("")
 
             # Phases and agents
             total = self._total_phases or len(self._phases)
@@ -161,7 +158,7 @@ class Display:
                 line = f"  {icon} {title}"
                 if p_elapsed:
                     line += f"  {_DIM}{p_elapsed}{_RESET}"
-                lines.append(self._pad_line(line))
+                lines.append(line)
 
                 phase_agents = [a for a in self._agents if a["phase"] == ph["title"]]
                 for ai, a in enumerate(phase_agents):
@@ -179,13 +176,10 @@ class Display:
                         a_line += f"  {_DIM}{a_elapsed}{_RESET}"
                     if a["status"] == "failed":
                         a_line += f"  {_RED}failed{_RESET}"
-                    lines.append(self._pad_line(a_line))
+                    lines.append(a_line)
 
                 if phase_agents:
-                    lines.append(f"│{' ' * self._width}│")
-
-            # Footer
-            lines.append(f"└{'─' * self._width}┘")
+                    lines.append("")
 
             return "\n".join(lines)
 
@@ -261,16 +255,22 @@ class Display:
             self._refresh_thread.start()
 
     def stop(self) -> None:
-        """Stop auto-refresh, exit alt screen, show cursor."""
+        """Stop auto-refresh, draw final frame, show cursor."""
         self._running = False
         if self._refresh_thread:
             self._refresh_thread.join(timeout=1.0)
+        # Force last running phase to done for final render
+        with self._lock:
+            if self._phases and self._phases[-1]["status"] == "running":
+                self._phases[-1]["status"] = "done"
+                self._phases[-1]["end_time"] = time.time()
         if self._enabled:
             if self._last_line_count > 0:
                 sys.stderr.write(f"\033[{self._last_line_count}A")
             sys.stderr.write(self._render())
             sys.stderr.write(_CLEAR_BELOW)
             sys.stderr.write(_CURSOR_SHOW)
+            sys.stderr.write("\n")
             sys.stderr.flush()
 
     def summary(self) -> str:
