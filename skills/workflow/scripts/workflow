@@ -82,21 +82,33 @@ def _discover_topology(mod, wf_args: dict) -> list[dict]:
         phases.append({"title": title})
         current_tasks = []
 
-    def _stub_agent(prompt: str, *, schema=None, label=None, model=None, backend=None) -> None:
+    def _stub_agent(prompt: str, *, schema=None, label=None, model=None, backend=None) -> str:
         current_tasks.append(label or prompt[:40])
+        return ""  # return empty string for safe chaining
 
     def _stub_parallel(thunks):
+        results = []
         for t in thunks:
-            t()
+            try:
+                results.append(t())
+            except Exception:
+                results.append("")
+        return results
 
     def _stub_pipeline(items, *stages):
-        for item in items[:1]:  # only first item needed for topology
+        results = []
+        for item in items[:1]:
             result = item
             for stage in stages:
-                if stage is stages[0]:
-                    result = stage(item, 0)
-                else:
-                    result = stage(result, item, 0)
+                try:
+                    if stage is stages[0]:
+                        result = stage(item, 0) or ""
+                    else:
+                        result = stage(result, item, 0) or ""
+                except Exception:
+                    result = ""
+            results.append(result)
+        return results
 
     def _stub_log(msg: str) -> None:
         pass
