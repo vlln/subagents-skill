@@ -70,6 +70,53 @@ def _parse_flags(args: list[str]) -> tuple[dict, str | None, bool]:
     return wf_args, resume_id, is_resume
 
 
+def _discover_topology(mod, wf_args: dict) -> list[dict]:
+    """Run the workflow with stub functions to discover phases and tasks."""
+    phases: list[dict] = []
+    current_tasks: list[str] = []
+
+    def _stub_phase(title: str) -> None:
+        nonlocal current_tasks
+        if current_tasks:
+            phases[-1]["tasks"] = current_tasks
+        phases.append({"title": title})
+        current_tasks = []
+
+    def _stub_agent(prompt: str, *, schema=None, label=None, model=None, backend=None) -> None:
+        current_tasks.append(label or prompt[:40])
+
+    def _stub_parallel(thunks):
+        for t in thunks:
+            t()
+
+    def _stub_pipeline(items, *stages):
+        for item in items[:1]:  # only first item needed for topology
+            result = item
+            for stage in stages:
+                if stage is stages[0]:
+                    result = stage(item, 0)
+                else:
+                    result = stage(result, item, 0)
+
+    def _stub_log(msg: str) -> None:
+        pass
+
+    def _stub_workflow(path: str, args: dict | None = None) -> None:
+        pass
+
+    try:
+        mod.run(
+            agent=_stub_agent, parallel=_stub_parallel, pipeline=_stub_pipeline,
+            phase=_stub_phase, log=_stub_log, args=wf_args, workflow=_stub_workflow,
+        )
+    except Exception:
+        pass  # dry-run may fail on real data, topology is still collected
+
+    if current_tasks:
+        phases[-1]["tasks"] = current_tasks
+    return phases
+
+
 def cmd_run(args: list[str]) -> None:
     if not args:
         print("Error: workflow run <script.py> [--args '<json>'] [--resume <run_id>]", file=sys.stderr)
@@ -86,14 +133,16 @@ def cmd_run(args: list[str]) -> None:
     mod = _load_script(script_path)
     meta = getattr(mod, "meta", {})
 
-    # Set up display
+    # Dry-run: discover topology by running with stub functions
+    topology = _discover_topology(mod, wf_args)
+
+    # Set up display with full tree
     run_id = resume_id or _ctx.run_id
     display = Display(
         name=meta.get("name", script_path.stem),
         run_id=run_id,
     )
-    if meta.get("phases"):
-        display.set_phases(meta["phases"])
+    display.set_phases(topology)
     set_display(display)
     display.start_auto_refresh()
 
@@ -132,13 +181,15 @@ def cmd_resume(args: list[str]) -> None:
     mod = _load_script(script_path)
     meta = getattr(mod, "meta", {})
 
+    # Dry-run: discover topology
+    topology = _discover_topology(mod, wf_args)
+
     # Set up display
     display = Display(
         name=meta.get("name", script_path.stem),
         run_id=run_id,
     )
-    if meta.get("phases"):
-        display.set_phases(meta["phases"])
+    display.set_phases(topology)
     set_display(display)
     display.start_auto_refresh()
 
