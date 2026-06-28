@@ -11,7 +11,8 @@ from typing import Any
 
 _CURSOR_HIDE = "\033[?25l"
 _CURSOR_SHOW = "\033[?25h"
-_CLEAR = "\033[2J\033[H"
+_CURSOR_HOME = "\033[H"
+_CLEAR_BELOW = "\033[0J"
 _CLEAR_LINE = "\033[K"
 _RESET = "\033[0m"
 _BOLD = "\033[1m"
@@ -191,8 +192,9 @@ class Display:
 
     def _draw(self) -> None:
         self._spinner_idx += 1
-        sys.stderr.write(_CLEAR)
+        sys.stderr.write(_CURSOR_HOME)
         sys.stderr.write(self._render())
+        sys.stderr.write(_CLEAR_BELOW)
         sys.stderr.write("\n")
         sys.stderr.flush()
 
@@ -256,8 +258,9 @@ class Display:
         if self._refresh_thread:
             self._refresh_thread.join(timeout=1.0)
         if self._enabled:
-            sys.stderr.write(_CLEAR)
+            sys.stderr.write(_CURSOR_HOME)
             sys.stderr.write(self._render())
+            sys.stderr.write(_CLEAR_BELOW)
             sys.stderr.write(_CURSOR_SHOW)
             sys.stderr.flush()
 
