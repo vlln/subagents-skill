@@ -106,7 +106,12 @@ def cmd_run(args: list[str]) -> None:
         display.stop()
 
     if result is not None:
-        print(json.dumps(result, indent=2, ensure_ascii=False))
+        if isinstance(result, str):
+            print(result)
+        elif isinstance(result, dict) and "summary" in result:
+            print(result["summary"])
+        else:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
 
 
 def cmd_resume(args: list[str]) -> None:
@@ -146,7 +151,12 @@ def cmd_resume(args: list[str]) -> None:
         display.stop()
 
     if result is not None:
-        print(json.dumps(result, indent=2, ensure_ascii=False))
+        if isinstance(result, str):
+            print(result)
+        elif isinstance(result, dict) and "summary" in result:
+            print(result["summary"])
+        else:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
 
 
 def cmd_list(args: list[str]) -> None:

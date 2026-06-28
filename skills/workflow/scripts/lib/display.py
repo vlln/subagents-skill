@@ -209,26 +209,58 @@ class Display:
         return f"│{line}│"
 
     def _emit_status(self) -> None:
-        """Non-TTY: print one compact status line on state change."""
+        """Non-TTY: print the full tree on state change."""
         with self._lock:
             elapsed = _fmt_elapsed(time.time() - self._start_time)
             self._spinner_idx += 1
-            parts: list[str] = [f"[workflow] {self._name}"]
+
+            lines: list[str] = []
+            header = f"══ Workflow: {self._name}"
             if self._run_id:
-                parts.append(f"({self._run_id})")
-            parts.append(f"{elapsed}")
+                header += f" ({self._run_id})"
+            header += f"  {elapsed}"
+            lines.append(header)
 
-            for ph in self._phases:
+            total = self._total_phases or len(self._phases)
+            for pi, ph in enumerate(self._phases):
+                phase_num = f"{pi + 1}/{total}" if total > 0 else ""
                 icon = _status_icon(ph["status"], self._spinner_idx)
-                parts.append(f"| {icon} {ph['title']}")
+                p_elapsed = ""
+                if ph["status"] == "done" and ph["end_time"]:
+                    p_elapsed = _fmt_elapsed(ph["end_time"] - ph["start_time"])
+                elif ph["status"] == "running":
+                    p_elapsed = _fmt_elapsed(time.time() - ph["start_time"])
 
-            line = " ".join(parts)
-            # Compare by phase statuses only (ignore spinner variation)
-            key = "|".join(f"{ph['status']}:{ph['title']}" for ph in self._phases)
+                title = f" Phase {phase_num}: {ph['title']}" if phase_num else f" Phase: {ph['title']}"
+                line = f"  {icon} {title}"
+                if p_elapsed:
+                    line += f"  {p_elapsed}"
+                lines.append(line)
+
+                phase_agents = [a for a in self._agents if a["phase"] == ph["title"]]
+                for ai, a in enumerate(phase_agents):
+                    is_last = ai == len(phase_agents) - 1
+                    prefix = "   └─" if is_last else "   ├─"
+                    a_icon = _status_icon(a["status"], self._spinner_idx)
+                    a_elapsed = ""
+                    if a["status"] in ("done", "failed"):
+                        a_elapsed = _fmt_elapsed(a["elapsed"])
+                    elif a["status"] == "running":
+                        a_elapsed = _fmt_elapsed(time.time() - a["start_time"])
+
+                    a_line = f" {prefix} {a_icon} {a['label']}"
+                    if a_elapsed:
+                        a_line += f"  {a_elapsed}"
+                    if a["status"] == "failed":
+                        a_line += f"  failed"
+                    lines.append(a_line)
+
+            key = "\n".join(lines)
             if key == self._last_status:
                 return
             self._last_status = key
-        sys.stderr.write(f"{line}\n")
+
+        sys.stderr.write(key + "\n\n")
         sys.stderr.flush()
 
     # ── lifecycle ───────────────────────────────────────────────────────
