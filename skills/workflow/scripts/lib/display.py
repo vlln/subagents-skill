@@ -24,6 +24,12 @@ _CYAN = "\033[36m"
 _SPINNERS = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
 
+def _strip_ansi(text: str) -> str:
+    """Remove ANSI escape codes and spinner characters for comparison."""
+    import re
+    return re.sub(r"\033\[[0-9;]*[a-zA-Z]", "", text)
+
+
 def _status_icon(status: str, spinner_idx: int = 0) -> str:
     if status == "done":
         return f"{_GREEN}✓{_RESET}"
@@ -65,7 +71,7 @@ class Display:
         self._running = False
         self._enabled = sys.stderr.isatty()
         self._total_phases = 0
-        self._last_line_count = 0
+        self._last_status = ""  # debounce: skip duplicate status lines
 
     # ── state tracking ──────────────────────────────────────────────────
 
@@ -206,6 +212,11 @@ class Display:
                 parts.append(f"| {icon} {ph['title']}")
 
             line = " ".join(parts)
+            # Compare by phase statuses only (ignore spinner variation)
+            key = "|".join(f"{ph['status']}:{ph['title']}" for ph in self._phases)
+            if key == self._last_status:
+                return
+            self._last_status = key
         sys.stderr.write(f"{line}\n")
         sys.stderr.flush()
 
