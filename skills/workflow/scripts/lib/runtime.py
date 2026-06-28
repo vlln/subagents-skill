@@ -315,7 +315,8 @@ def workflow(script_path: str, args: dict | None = None) -> Any:
 def phase(title: str) -> None:
     if _display:
         _display.phase(title)
-    print(f"[workflow] Phase: {title}", file=sys.stderr, flush=True)
+    if _display is None:
+        print(f"[workflow] Phase: {title}", file=sys.stderr, flush=True)
 
 
 def log(message: str) -> None:
