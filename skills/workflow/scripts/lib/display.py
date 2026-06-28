@@ -65,6 +65,7 @@ class Display:
         self._running = False
         self._enabled = sys.stderr.isatty()
         self._total_phases = 0
+        self._last_line_count = 0
 
     # ── state tracking ──────────────────────────────────────────────────
 
@@ -179,6 +180,7 @@ class Display:
 
     def _draw(self) -> None:
         if not self._enabled:
+            self._draw_line()
             return
         self._spinner_idx += 1
         sys.stderr.write(_CLEAR)
@@ -186,14 +188,31 @@ class Display:
         sys.stderr.write("\n")
         sys.stderr.flush()
 
+    def _draw_line(self) -> None:
+        """Non-TTY fallback: print a compact status line."""
+        with self._lock:
+            elapsed = _fmt_elapsed(time.time() - self._start_time)
+            self._spinner_idx += 1
+            parts: list[str] = [f"[workflow] {self._name}"]
+            if self._run_id:
+                parts.append(f"({self._run_id})")
+            parts.append(f"{elapsed}")
+
+            for ph in self._phases:
+                icon = _status_icon(ph["status"], self._spinner_idx)
+                parts.append(f"| {icon} {ph['title']}")
+
+            line = " ".join(parts)
+            sys.stderr.write(f"\r{line}{_CLEAR_LINE}\n")
+            sys.stderr.flush()
+
     # ── lifecycle ───────────────────────────────────────────────────────
 
     def start_auto_refresh(self, interval: float = 0.3) -> None:
         """Start a background thread that periodically redraws the panel."""
-        if not self._enabled:
-            return
-        sys.stderr.write(_CURSOR_HIDE)
-        sys.stderr.flush()
+        if self._enabled:
+            sys.stderr.write(_CURSOR_HIDE)
+            sys.stderr.flush()
         self._running = True
 
         def _refresh() -> None:
@@ -212,6 +231,10 @@ class Display:
         if self._enabled:
             # Final redraw with final state
             sys.stderr.write(_CLEAR)
+            sys.stderr.write(self._render())
+            sys.stderr.write("\n\n")
+            sys.stderr.write(_CURSOR_SHOW)
+            sys.stderr.flush()
             sys.stderr.write(self._render())
             sys.stderr.write("\n\n")
             sys.stderr.write(_CURSOR_SHOW)
