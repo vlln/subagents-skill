@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import sys
-import time
 import threading
+import time
 from typing import Any
 
 # ── ANSI helpers ────────────────────────────────────────────────────────────
 
 _CURSOR_HIDE = "\033[?25l"
 _CURSOR_SHOW = "\033[?25h"
+_CLEAR_BELOW = "\033[0J"
 _RESET = "\033[0m"
 _BOLD = "\033[1m"
 _DIM = "\033[2m"
@@ -65,9 +66,12 @@ class Display:
         self._agents: list[dict[str, Any]] = []
         self._start_time = time.time()
         self._spinner_idx = 0
+        self._refresh_thread: threading.Thread | None = None
+        self._running = False
         self._enabled = sys.stderr.isatty()
         self._total_phases = 0
         self._last_status = ""  # debounce: skip duplicate status lines
+        self._last_line_count = 0  # for cursor-up repositioning
 
     # ── state tracking ──────────────────────────────────────────────────
 
@@ -185,6 +189,23 @@ class Display:
 
             return "\n".join(lines)
 
+    def _draw(self) -> None:
+        self._spinner_idx += 1
+        rendered = self._render()
+        line_count = rendered.count("\n") + 1
+        if self._last_line_count > 0:
+            # Move cursor back up to panel start
+            sys.stderr.write(f"\033[{self._last_line_count}A")
+        else:
+            # First draw: reserve space so terminal doesn't scroll
+            sys.stderr.write("\n" * line_count)
+            sys.stderr.write(f"\033[{line_count}A")
+        sys.stderr.write(rendered)
+        sys.stderr.write(_CLEAR_BELOW)
+        sys.stderr.write("\n")
+        sys.stderr.flush()
+        self._last_line_count = line_count
+
     def _pad_line(self, line: str) -> str:
         """Pad a content line to fill the panel width, accounting for ANSI codes."""
         visible = len(_strip_ansi(line))
@@ -219,27 +240,37 @@ class Display:
     # ── lifecycle ───────────────────────────────────────────────────────
 
     def start_auto_refresh(self, interval: float = 0.3) -> None:
-        """Draw initial panel (TTY) or nothing (non-TTY)."""
+        """Start a background thread that periodically redraws the panel.
+
+        In TTY mode: full panel with periodic refresh.
+        In non-TTY mode: no background refresh — status lines are emitted
+        only on state changes (phase/agent_start/agent_done).
+        """
         if self._enabled:
             sys.stderr.write(_CURSOR_HIDE)
-            sys.stderr.write(self._render())
-            sys.stderr.write("\n")
             sys.stderr.flush()
+        self._running = True
+
+        if self._enabled:
+            def _refresh() -> None:
+                while self._running:
+                    self._draw()
+                    time.sleep(interval)
+
+            self._refresh_thread = threading.Thread(target=_refresh, daemon=True)
+            self._refresh_thread.start()
 
     def stop(self) -> None:
-        """Draw final panel (TTY) or summary (non-TTY)."""
+        """Stop auto-refresh, exit alt screen, show cursor."""
+        self._running = False
+        if self._refresh_thread:
+            self._refresh_thread.join(timeout=1.0)
         if self._enabled:
+            if self._last_line_count > 0:
+                sys.stderr.write(f"\033[{self._last_line_count}A")
             sys.stderr.write(self._render())
+            sys.stderr.write(_CLEAR_BELOW)
             sys.stderr.write(_CURSOR_SHOW)
-            sys.stderr.write("\n")
-            sys.stderr.flush()
-        else:
-            sys.stderr.write("\n")
-            sys.stderr.write(self.summary())
-            sys.stderr.write("\n")
-            sys.stderr.flush()
-            sys.stderr.write(self.summary())
-            sys.stderr.write("\n")
             sys.stderr.flush()
 
     def summary(self) -> str:
