@@ -88,6 +88,8 @@ class Display:
                 "start_time": time.time(),
                 "end_time": 0.0,
             })
+        if not self._enabled:
+            self._emit_status()
 
     def agent_start(self, label: str, prompt: str = "") -> None:
         with self._lock:
@@ -100,6 +102,8 @@ class Display:
                 "start_time": time.time(),
                 "elapsed": 0.0,
             })
+        if not self._enabled:
+            self._emit_status()
 
     def agent_done(self, label: str, success: bool, elapsed: float = 0.0) -> None:
         with self._lock:
@@ -108,6 +112,8 @@ class Display:
                     a["status"] = "done" if success else "failed"
                     a["elapsed"] = elapsed
                     break
+        if not self._enabled:
+            self._emit_status()
 
     def agent_skip(self, label: str) -> None:
         with self._lock:
@@ -179,17 +185,14 @@ class Display:
             return "\n".join(lines)
 
     def _draw(self) -> None:
-        if not self._enabled:
-            self._draw_line()
-            return
         self._spinner_idx += 1
         sys.stderr.write(_CLEAR)
         sys.stderr.write(self._render())
         sys.stderr.write("\n")
         sys.stderr.flush()
 
-    def _draw_line(self) -> None:
-        """Non-TTY fallback: print a compact status line."""
+    def _emit_status(self) -> None:
+        """Non-TTY: print one compact status line on state change."""
         with self._lock:
             elapsed = _fmt_elapsed(time.time() - self._start_time)
             self._spinner_idx += 1
@@ -203,25 +206,30 @@ class Display:
                 parts.append(f"| {icon} {ph['title']}")
 
             line = " ".join(parts)
-            sys.stderr.write(f"\r{line}{_CLEAR_LINE}\n")
-            sys.stderr.flush()
+        sys.stderr.write(f"{line}\n")
+        sys.stderr.flush()
 
     # ── lifecycle ───────────────────────────────────────────────────────
 
     def start_auto_refresh(self, interval: float = 0.3) -> None:
-        """Start a background thread that periodically redraws the panel."""
+        """Start a background thread that periodically redraws the panel.
+
+        In TTY mode: full panel with periodic refresh.
+        In non-TTY mode: no background refresh — status lines are emitted
+        only on state changes (phase/agent_start/agent_done).
+        """
         if self._enabled:
             sys.stderr.write(_CURSOR_HIDE)
             sys.stderr.flush()
-        self._running = True
+            self._running = True
 
-        def _refresh() -> None:
-            while self._running:
-                self._draw()
-                time.sleep(interval)
+            def _refresh() -> None:
+                while self._running:
+                    self._draw()
+                    time.sleep(interval)
 
-        self._refresh_thread = threading.Thread(target=_refresh, daemon=True)
-        self._refresh_thread.start()
+            self._refresh_thread = threading.Thread(target=_refresh, daemon=True)
+            self._refresh_thread.start()
 
     def stop(self) -> None:
         """Stop auto-refresh, show cursor, print summary."""
