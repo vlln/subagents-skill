@@ -319,4 +319,6 @@ def phase(title: str) -> None:
 
 
 def log(message: str) -> None:
+    if _display is not None:
+        return  # display panel shows status — suppress log noise
     print(f"[workflow] {message}", file=sys.stderr, flush=True)
