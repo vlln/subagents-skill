@@ -11,8 +11,6 @@ from typing import Any
 
 _CURSOR_HIDE = "\033[?25l"
 _CURSOR_SHOW = "\033[?25h"
-_ALT_SCREEN = "\033[?1049h"
-_EXIT_ALT_SCREEN = "\033[?1049l"
 _CLEAR = "\033[2J\033[H"
 _CLEAR_LINE = "\033[K"
 _RESET = "\033[0m"
@@ -239,7 +237,6 @@ class Display:
         only on state changes (phase/agent_start/agent_done).
         """
         if self._enabled:
-            sys.stderr.write(_ALT_SCREEN)
             sys.stderr.write(_CURSOR_HIDE)
             sys.stderr.flush()
         self._running = True
@@ -261,7 +258,6 @@ class Display:
         if self._enabled:
             sys.stderr.write(_CLEAR)
             sys.stderr.write(self._render())
-            sys.stderr.write(_EXIT_ALT_SCREEN)
             sys.stderr.write(_CURSOR_SHOW)
             sys.stderr.flush()
 
