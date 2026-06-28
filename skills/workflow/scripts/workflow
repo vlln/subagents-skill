@@ -104,8 +104,6 @@ def cmd_run(args: list[str]) -> None:
         )
     finally:
         display.stop()
-        print(file=sys.stderr)
-        print(display.summary(), file=sys.stderr)
 
     if result is not None:
         print(json.dumps(result, indent=2, ensure_ascii=False))
@@ -146,8 +144,6 @@ def cmd_resume(args: list[str]) -> None:
         )
     finally:
         display.stop()
-        print(file=sys.stderr)
-        print(display.summary(), file=sys.stderr)
 
     if result is not None:
         print(json.dumps(result, indent=2, ensure_ascii=False))
