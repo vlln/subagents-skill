@@ -11,6 +11,7 @@ import os
 import subprocess
 import sys
 import threading
+import time
 import uuid
 from pathlib import Path
 from typing import Any, Callable
@@ -110,6 +111,20 @@ def set_context(run_id: str | None = None, resume: bool = False) -> WorkflowCont
     return _ctx
 
 
+# ── display integration ──────────────────────────────────────────────────
+
+_display: Any = None  # Display | None, set by workflow CLI
+
+
+def set_display(d: Any) -> None:
+    global _display
+    _display = d
+
+
+def get_display() -> Any:
+    return _display
+
+
 # ── public API ───────────────────────────────────────────────────────────
 
 def agent(
@@ -121,12 +136,16 @@ def agent(
 ) -> Any:
     session = _ctx.next_session()
     log_prefix = f"[{label}] " if label else ""
+    display_label = label or _short_prompt(prompt)
 
     # Resume: skip if already completed
     if _ctx.resume:
         cached = _ctx.try_resume(session)
         if cached is not None:
             log(f"{log_prefix}resumed (cached)")
+            if _display:
+                _display.agent_start(display_label, prompt)
+                _display.agent_skip(display_label)
             if schema:
                 try:
                     return json.loads(cached)
@@ -135,11 +154,18 @@ def agent(
             return cached
 
     log(f"{log_prefix}starting...")
+    if _display:
+        _display.agent_start(display_label, prompt)
+
+    t0 = time.time()
     events = _run_subagent(prompt, session)
+    elapsed = time.time() - t0
     exit_code = _extract_exit_code(events)
 
     if exit_code != 0:
         log(f"{log_prefix}failed (exit {exit_code})")
+        if _display:
+            _display.agent_done(display_label, success=False, elapsed=elapsed)
         return None
 
     text = _extract_text(events)
@@ -148,13 +174,27 @@ def agent(
         try:
             parsed = json.loads(text)
             log(f"{log_prefix}done")
+            if _display:
+                _display.agent_done(display_label, success=True, elapsed=elapsed)
             return parsed
         except json.JSONDecodeError:
             log(f"{log_prefix}output is not valid JSON")
+            if _display:
+                _display.agent_done(display_label, success=False, elapsed=elapsed)
             return None
 
     log(f"{log_prefix}done")
+    if _display:
+        _display.agent_done(display_label, success=True, elapsed=elapsed)
     return text
+
+
+def _short_prompt(prompt: str, max_len: int = 50) -> str:
+    """Truncate a prompt for display labels."""
+    first_line = prompt.split("\n")[0].strip()
+    if len(first_line) > max_len:
+        return first_line[:max_len - 3] + "..."
+    return first_line
 
 
 def parallel(thunks: list[Callable[[], Any]]) -> list[Any]:
@@ -239,6 +279,8 @@ def workflow(script_path: str, args: dict | None = None) -> Any:
 
 
 def phase(title: str) -> None:
+    if _display:
+        _display.phase(title)
     print(f"[workflow] Phase: {title}", file=sys.stderr, flush=True)
 
 

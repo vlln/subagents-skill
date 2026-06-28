@@ -26,8 +26,9 @@ sys.path.insert(0, str(_subagents_lib))
 
 from runtime import (  # noqa: E402
     agent, parallel, pipeline, phase, log, workflow,
-    set_context, _outputs_dir,
+    set_context, set_display, _ctx, _outputs_dir,
 )
+from display import Display  # noqa: E402
 
 
 def _load_script(script_path: Path):
@@ -84,15 +85,27 @@ def cmd_run(args: list[str]) -> None:
 
     mod = _load_script(script_path)
     meta = getattr(mod, "meta", {})
-    print(f"[workflow] {meta.get('name', script_path.name)} — {meta.get('description', '')}",
-          file=sys.stderr)
-    if is_resume:
-        print(f"[workflow] Resuming run {resume_id}", file=sys.stderr)
 
-    result = mod.run(
-        agent=agent, parallel=parallel, pipeline=pipeline,
-        phase=phase, log=log, args=wf_args, workflow=workflow,
+    # Set up display
+    run_id = resume_id or _ctx.run_id
+    display = Display(
+        name=meta.get("name", script_path.stem),
+        run_id=run_id,
     )
+    if meta.get("phases"):
+        display.set_total_phases(len(meta["phases"]))
+    set_display(display)
+    display.start_auto_refresh()
+
+    try:
+        result = mod.run(
+            agent=agent, parallel=parallel, pipeline=pipeline,
+            phase=phase, log=log, args=wf_args, workflow=workflow,
+        )
+    finally:
+        display.stop()
+        print(file=sys.stderr)
+        print(display.summary(), file=sys.stderr)
 
     if result is not None:
         print(json.dumps(result, indent=2, ensure_ascii=False))
@@ -115,14 +128,26 @@ def cmd_resume(args: list[str]) -> None:
 
     mod = _load_script(script_path)
     meta = getattr(mod, "meta", {})
-    print(f"[workflow] {meta.get('name', script_path.name)} — {meta.get('description', '')}",
-          file=sys.stderr)
-    print(f"[workflow] Resuming run {run_id}", file=sys.stderr)
 
-    result = mod.run(
-        agent=agent, parallel=parallel, pipeline=pipeline,
-        phase=phase, log=log, args=wf_args, workflow=workflow,
+    # Set up display
+    display = Display(
+        name=meta.get("name", script_path.stem),
+        run_id=run_id,
     )
+    if meta.get("phases"):
+        display.set_total_phases(len(meta["phases"]))
+    set_display(display)
+    display.start_auto_refresh()
+
+    try:
+        result = mod.run(
+            agent=agent, parallel=parallel, pipeline=pipeline,
+            phase=phase, log=log, args=wf_args, workflow=workflow,
+        )
+    finally:
+        display.stop()
+        print(file=sys.stderr)
+        print(display.summary(), file=sys.stderr)
 
     if result is not None:
         print(json.dumps(result, indent=2, ensure_ascii=False))
