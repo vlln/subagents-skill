@@ -244,7 +244,7 @@ class Display:
         return f"│{line}│"
 
     def _emit_status(self) -> None:
-        """Non-TTY: print one compact status line on state change."""
+        """Non-TTY: print one compact status line per phase change."""
         with self._lock:
             elapsed = _fmt_elapsed(time.time() - self._start_time)
             self._spinner_idx += 1
