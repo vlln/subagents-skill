@@ -1,9 +1,9 @@
 <h1 align="center">Subagents</h1>
 
 <p align="center">
-  <strong>一个接口，八个后端。</strong><br/>
-  将任务分发到 kimi、claude、codex、pi、opencode、qwen、kiro、gemini 等 AI 编程 Agent ——<br/>
-  全部使用同一条 <code>subagents run</code> 命令。
+  <strong>将任意 AI 编程 Agent 变为你的子代理。</strong><br/>
+  把 kimi、claude、codex、pi、opencode、qwen、kiro、gemini —— 或任意 CLI Agent —— 封装为可复用的子代理，<br/>
+  然后用<strong>动态工作流编排</strong>它们：流水线、并行集群、嵌套拓扑。
 </p>
 
 <p align="center">
@@ -56,11 +56,20 @@
 <tr>
 <td width="50%" valign="top">
 
-### 🧩 一个接口，八个后端
+### 🔗 动态工作流编排
 
-kimi、claude、codex、pi、opencode、qwen、kiro、gemini —— 全部通过同一条 `subagents run` 命令调用。自动检测选择合适的后端，也可通过 `--backend` 手动指定。
+通过 `workflow.py` 实现流水线、并行和嵌套工作流。串联 Agent、分叉合并、恢复失败阶段 —— 声明式组合复杂的多 Agent 拓扑。
 
 </td>
+<td width="50%" valign="top">
+
+### 🧩 任意 Agent CLI 作为子代理
+
+将任意 CLI Agent 封装为可复用的子代理。自动检测后端，也可通过 `--backend` 手动指定。可扩展 —— 几行代码即可添加新后端。
+
+</td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 ### 🔁 持久化会话
@@ -68,20 +77,11 @@ kimi、claude、codex、pi、opencode、qwen、kiro、gemini —— 全部通过
 每次运行创建命名会话。后续可恢复，Agent 保留所有历史上下文。轻松构建跨越多天的多轮对话。
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 ### ⚡ 并行集群
 
 通过 `--bg` 将任务分发到多个 Agent，用 `subagents wait` 收集结果。同时对 10 个文件运行 10 个 reviewer。
-
-</td>
-<td width="50%" valign="top">
-
-### 🔗 工作流编排
-
-通过 `workflow.py` 实现流水线、并行和嵌套工作流。串联 Agent、分叉合并、恢复失败阶段。
 
 </td>
 </tr>

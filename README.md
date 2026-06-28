@@ -1,9 +1,9 @@
 <h1 align="center">Subagents</h1>
 
 <p align="center">
-  <strong>One interface, eight backends.</strong><br/>
-  Dispatch tasks to AI coding agents across kimi, claude, codex, pi, opencode, qwen, kiro, and gemini —<br/>
-  same <code>subagents run</code> command for all.
+  <strong>Turn any AI coding agent into your subagent.</strong><br/>
+  Wrap kimi, claude, codex, pi, opencode, qwen, kiro, gemini — or any CLI agent — as a reusable subagent,<br/>
+  then <strong>orchestrate them with dynamic workflows</strong>: pipelines, parallel swarms, and nested graphs.
 </p>
 
 <p align="center">
@@ -56,11 +56,20 @@ These skills follow the [Agent Skills specification](https://agentskills.io/spec
 <tr>
 <td width="50%" valign="top">
 
-### 🧩 One Interface, Eight Backends
+### 🔗 Dynamic Workflow Orchestration
 
-kimi, claude, codex, pi, opencode, qwen, kiro, and gemini — all through the same `subagents run` command. Auto-detection picks the right one; override with `--backend`.
+Pipeline, parallel, and nested workflows with `workflow.py`. Chain agents, split-merge, resume failed stages — compose complex multi-agent topologies declaratively.
 
 </td>
+<td width="50%" valign="top">
+
+### 🧩 Any Agent CLI as Subagent
+
+Wrap any CLI agent as a reusable subagent. Auto-detection picks the right backend; override with `--backend`. Extensible — add new backends in a few lines.
+
+</td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 ### 🔁 Persistent Sessions
@@ -68,20 +77,11 @@ kimi, claude, codex, pi, opencode, qwen, kiro, and gemini — all through the sa
 Every run creates a named session. Resume it later and the agent remembers all prior context. Build up multi-turn conversations over days.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 ### ⚡ Parallel Swarms
 
 Fan out tasks across multiple agents with `--bg`, then `subagents wait` to collect results. Run 10 reviewers against 10 files simultaneously.
-
-</td>
-<td width="50%" valign="top">
-
-### 🔗 Workflow Orchestration
-
-Pipeline, parallel, and nested workflows with `workflow.py`. Chain agents together, split-merge, and resume failed stages.
 
 </td>
 </tr>
