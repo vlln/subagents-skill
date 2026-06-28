@@ -1,26 +1,26 @@
 <h1 align="center">Subagents</h1>
 
 <p align="center">
-  <strong>One interface, eight backends.</strong><br/>
-  Dispatch tasks to AI coding agents across kimi, claude, codex, pi, opencode, qwen, kiro, and gemini —<br/>
-  same <code>subagents run</code> command for all.
+  <strong>一个接口，八个后端。</strong><br/>
+  将任务分发到 kimi、claude、codex、pi、opencode、qwen、kiro、gemini 等 AI 编程 Agent ——<br/>
+  全部使用同一条 <code>subagents run</code> 命令。
 </p>
 
 <p align="center">
   <a href="https://github.com/vlln/subagents-skill/stargazers"><img src="https://badgen.net/github/stars/vlln/subagents-skill?label=%E2%98%85" alt="GitHub stars" /></a>
   <img src="https://badgen.net/github/license/vlln/subagents-skill" alt="License" />
   <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10+" />
-  <img src="https://img.shields.io/badge/dependencies-zero-44CC11?style=flat-square" alt="Zero dependencies" />
-  <img src="https://img.shields.io/badge/spec-Agent%20Skills-8257D0?style=flat-square" alt="Agent Skills spec" />
+  <img src="https://img.shields.io/badge/dependencies-zero-44CC11?style=flat-square" alt="零依赖" />
+  <img src="https://img.shields.io/badge/spec-Agent%20Skills-8257D0?style=flat-square" alt="Agent Skills 规范" />
 </p>
 
 <p align="center">
-  <sub><a href="README.md">English</a> · <a href="docs/readme/README.zh-CN.md">中文</a></sub>
+  <sub><a href="../../README.md">English</a> · <a href="README.zh-CN.md">中文</a></sub>
 </p>
 
 ---
 
-## Supported Backends
+## 支持的后端
 
 <p align="center">
   <a href="https://www.kimi.com/code"><kbd><img src="https://www.google.com/s2/favicons?domain=kimi.com&sz=64" alt="Kimi" width="16" valign="middle" /> Kimi</kbd></a> &nbsp;
@@ -34,10 +34,10 @@
 </p>
 
 <p align="center">
-  <sub>Backend and transport are auto-detected. Override with <code>--backend &lt;name&gt;</code> and <code>--transport cli|acp</code>.</sub>
+  <sub>后端和传输协议自动检测。可通过 <code>--backend &lt;name&gt;</code> 和 <code>--transport cli|acp</code> 手动指定。</sub>
 </p>
 
-| Backend | Command | Transports | System Prompt |
+| 后端 | 命令 | 传输协议 | 系统提示 |
 |---------|---------|-----------|---------------|
 | kimi | `kimi` | CLI, ACP | inline |
 | claude | `claude` | CLI | native (append + overwrite) |
@@ -48,70 +48,70 @@
 | kiro | `kiro-cli` | CLI, ACP | inline |
 | gemini | `gemini` | CLI, ACP | inline |
 
-These skills follow the [Agent Skills specification](https://agentskills.io/specification) — compatible with any skills-compatible agent, including Claude Code, Codex, and Open Code.
+遵循 [Agent Skills 规范](https://agentskills.io/specification) —— 兼容 Claude Code、Codex、Open Code 等任何支持 Skills 的 Agent。
 
-## Features
+## 特性
 
 <table>
 <tr>
 <td width="50%" valign="top">
 
-### 🧩 One Interface, Eight Backends
+### 🧩 一个接口，八个后端
 
-kimi, claude, codex, pi, opencode, qwen, kiro, and gemini — all through the same `subagents run` command. Auto-detection picks the right one; override with `--backend`.
-
-</td>
-<td width="50%" valign="top">
-
-### 🔁 Persistent Sessions
-
-Every run creates a named session. Resume it later and the agent remembers all prior context. Build up multi-turn conversations over days.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-### ⚡ Parallel Swarms
-
-Fan out tasks across multiple agents with `--bg`, then `subagents wait` to collect results. Run 10 reviewers against 10 files simultaneously.
+kimi、claude、codex、pi、opencode、qwen、kiro、gemini —— 全部通过同一条 `subagents run` 命令调用。自动检测选择合适的后端，也可通过 `--backend` 手动指定。
 
 </td>
 <td width="50%" valign="top">
 
-### 🔗 Workflow Orchestration
+### 🔁 持久化会话
 
-Pipeline, parallel, and nested workflows with `workflow.py`. Chain agents together, split-merge, and resume failed stages.
+每次运行创建命名会话。后续可恢复，Agent 保留所有历史上下文。轻松构建跨越多天的多轮对话。
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-### 📡 JSONL Output
+### ⚡ 并行集群
 
-`--output json` for structured, streamable, versioned JSONL. Every event typed and timestamped — ready for piping into other tools.
+通过 `--bg` 将任务分发到多个 Agent，用 `subagents wait` 收集结果。同时对 10 个文件运行 10 个 reviewer。
 
 </td>
 <td width="50%" valign="top">
 
-### 🪶 Zero Dependencies
+### 🔗 工作流编排
 
-Python 3.10+ standard library only. No `pip install`, no `virtualenv`. Drop the scripts in and run.
+通过 `workflow.py` 实现流水线、并行和嵌套工作流。串联 Agent、分叉合并、恢复失败阶段。
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### 📡 JSONL 输出
+
+`--output json` 提供结构化、可流式传输、版本化的 JSONL 输出。每个事件都有类型和时间戳，可直接接入其他工具。
+
+</td>
+<td width="50%" valign="top">
+
+### 🪶 零依赖
+
+仅需 Python 3.10+ 标准库。无需 `pip install`，无需 `virtualenv`。丢进目录就能跑。
 
 </td>
 </tr>
 </table>
 
-## Installation
+## 安装
 
-### [skit](https://github.com/vlln/skit) (Recommended)
+### [skit](https://github.com/vlln/skit)（推荐）
 
 ```bash
 skit install ./subagents-skills --all
 ```
 
-### Manually
+### 手动安装
 
 <table>
 <tr>
@@ -148,58 +148,58 @@ git clone https://github.com/vlln/subagents-skill.git \
 
 ## Skills
 
-| Skill | Description |
+| Skill | 描述 |
 |-------|-------------|
-| [subagents](skills/subagents/SKILL.md) | Dispatch tasks to named agent sessions across multiple backends. Session resume, parallel swarms, JSONL output. |
-| [workflow](skills/workflow/SKILL.md) | Multi-agent orchestration — pipeline, parallel, and phase-based workflows. Nested sub-workflows, resume, structured output. |
+| [subagents](skills/subagents/SKILL.md) | 将任务分发到多个后端的命名 Agent 会话。支持会话恢复、并行集群、JSONL 输出。 |
+| [workflow](skills/workflow/SKILL.md) | 多 Agent 编排 —— 流水线、并行、分阶段工作流。嵌套子工作流、恢复、结构化输出。 |
 
-## Quick Start
+## 快速开始
 
 ```bash
-# Define an agent (optional)
+# 定义 Agent（可选）
 mkdir -p .agents/subagents
 cat > .agents/subagents/reviewer.md << 'EOF'
 ---
 name: reviewer
-description: Expert code reviewer
+description: 代码审查专家
 ---
-You are a code reviewer. Analyze code for correctness, security, and best practices.
+你是一名代码审查专家。从正确性、安全性和最佳实践的角度分析代码。
 EOF
 
-# Run a task
-scripts/subagents run reviewer review-auth "Review src/auth.ts for security issues"
+# 运行任务
+scripts/subagents run reviewer review-auth "审查 src/auth.ts 的安全性"
 
-# Resume the session with more context
-scripts/subagents run reviewer review-auth "Now check the error handling"
+# 恢复会话，追加更多上下文
+scripts/subagents run reviewer review-auth "现在检查错误处理逻辑"
 
-# Run 3 reviewers in parallel
-scripts/subagents run --bg reviewer r1 "Review src/auth.ts"
-scripts/subagents run --bg reviewer r2 "Review src/db.ts"
-scripts/subagents run --bg reviewer r3 "Review src/api.ts"
+# 并行运行 3 个 reviewer
+scripts/subagents run --bg reviewer r1 "审查 src/auth.ts"
+scripts/subagents run --bg reviewer r2 "审查 src/db.ts"
+scripts/subagents run --bg reviewer r3 "审查 src/api.ts"
 scripts/subagents wait r1 && scripts/subagents wait r2 && scripts/subagents wait r3
 
-# List all agents and sessions
+# 列出所有 Agent 和会话
 scripts/subagents list
 ```
 
-## Development
+## 开发
 
 ```bash
-# Unit tests (no backend required, CI-safe)
+# 单元测试（无需后端，CI 安全）
 python3 -m pytest tests/ --ignore=tests/test_integration.py
 
-# Integration tests (requires kimi CLI)
+# 集成测试（需要 kimi CLI）
 SKIP_INTEGRATION=0 python3 -m pytest tests/test_integration.py -v
 
-# All tests
+# 全部测试
 SKIP_INTEGRATION=0 python3 -m pytest tests/ -v
 ```
 
-| Layer | File | Count | Trigger | Time |
+| 层级 | 文件 | 用例数 | 触发方式 | 耗时 |
 |-------|------|-------|---------|------|
-| Unit | `tests/test_subagents.py` | 79 | `pytest` auto | <1s |
-| Unit | `tests/test_workflow.py` | 26 | `pytest` auto | <1s |
-| Integration | `tests/test_integration.py` | 8 | `SKIP_INTEGRATION=0` | ~3min |
+| 单元 | `tests/test_subagents.py` | 79 | `pytest` 自动 | <1s |
+| 单元 | `tests/test_workflow.py` | 26 | `pytest` 自动 | <1s |
+| 集成 | `tests/test_integration.py` | 8 | `SKIP_INTEGRATION=0` | ~3min |
 
 ## License
 
