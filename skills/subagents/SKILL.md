@@ -46,6 +46,76 @@ You are a code reviewer. Analyze code for correctness, security, and best practi
 - `description` (required) — shown in `list` and `status`.
 - Body (optional) — system prompt. Omit to use the backend's default.
 
+Pre-built agent definitions are available in [`references/agents/`](references/agents/) — copy them to `.agents/subagent/` to use directly.
+
+## Prompt Writing
+
+A good prompt has four elements: **goal**, **scope**, **steps**, and **output format**. The agent works independently — give it everything it needs to complete the task without asking questions.
+
+| Element | Purpose |
+|---------|---------|
+| **Goal** | One sentence describing the task |
+| **Scope** | What to look at, what to skip, any constraints |
+| **Steps** | Ordered list guiding execution (3-10 steps) |
+| **Output** | Expected structure or format |
+
+**Granularity:** a task should be self-contained with clear boundaries. Too small (one trivial step) causes overhead. Too large (entire project) loses focus. Aim for 3-10 steps that the agent can complete independently.
+
+**Good:**
+
+```
+Review src/auth/ for security vulnerabilities.
+
+Scope: src/auth/ directory only, ignore test files.
+
+Steps:
+1. Find all files in src/auth/
+2. Check for SQL injection in database queries
+3. Verify token storage and handling
+4. Review OAuth implementation against OWASP guidelines
+5. Check for missing rate limiting on login endpoints
+
+Return a list of findings with:
+- file path and line number
+- severity: critical | warning | note
+- description of the issue
+- concrete fix suggestion
+```
+
+**Poor:**
+
+```
+Check the code
+```
+
+**When to use structured output:**
+
+If the result will be piped to another tool or parsed programmatically, ask for JSON:
+
+```
+Return as JSON:
+{
+  "files_reviewed": [...],
+  "findings": [
+    {"file": "...", "line": 123, "severity": "high", "issue": "...", "fix": "..."}
+  ],
+  "summary": "..."
+}
+```
+
+**When to use background mode:**
+
+Use `--bg` + `send` when you have a sequence of independent tasks for the same agent:
+
+```bash
+subagents run --bg reviewer s1 "Analyze the auth module structure"
+subagents send s1 "Review error handling in auth endpoints"
+subagents send s1 "Check token refresh logic"
+subagents wait s1
+```
+
+Use `goal` when the agent needs to iterate autonomously toward a high-level objective (see [Goal-Driven Execution](#goal-driven-execution) above).
+
 ## Workflow
 
 ```bash
@@ -99,8 +169,8 @@ Background sessions (`--bg`) support task queuing:
 Example workflow:
 ```bash
 # Start background session in a worktree
-git worktree add .claude/worktrees/refactor -b refactor
-subagents run --bg --cwd .claude/worktrees/refactor reviewer s1 "analyze code"
+git worktree add /tmp/worktrees/refactor -b refactor
+subagents run --bg --cwd /tmp/worktrees/refactor reviewer s1 "analyze code"
 
 # Queue additional tasks
 subagents send s1 "refactor based on analysis"
@@ -114,7 +184,7 @@ subagents status reviewer s1
 subagents wait s1
 
 # Review and merge
-cd .claude/worktrees/refactor
+cd /tmp/worktrees/refactor
 git diff
 cd ~/project
 git merge refactor
@@ -183,6 +253,8 @@ If max iterations is reached, the goal is marked as `failed` with reason `max_it
 ## Backends
 
 `--backend <name>` selects the provider. Auto-detected if omitted. `--transport cli|acp` forces transport mode for backends that support both.
+
+`--model <name>` overrides the model for a single invocation. The model name is passed directly to the backend CLI; validation depends on the backend. Some backends reject unknown models with an error (kimi, claude, opencode), others silently fall back to their default (pi, qwen, gemini). Use `opencode models` to list available models for that backend; other backends do not expose a model list.
 
 `--system-mode append|overwrite` controls how the agent's system prompt is handled:
 
