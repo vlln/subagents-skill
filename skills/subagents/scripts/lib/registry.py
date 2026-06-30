@@ -9,11 +9,19 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
+_cached_registry_path: Path | None = None
+
+
 def _get_registry_path() -> Path:
+    global _cached_registry_path
+    if _cached_registry_path is not None:
+        return _cached_registry_path
     env = os.environ.get("SU BAGENT_REGISTRY", "")
     if env:
-        return Path(env)
-    return Path(".agents/subagents/agents.json")
+        _cached_registry_path = Path(env).resolve()
+    else:
+        _cached_registry_path = Path(".agents/subagents/agents.json").resolve()
+    return _cached_registry_path
 
 
 def _read() -> dict:
@@ -33,7 +41,7 @@ def _write(data: dict) -> None:
 
 
 def register(agent: str, session: str, session_id: str, cwd: str | None = None, background: bool = False) -> None:
-    """Register a new session for an agent.
+    """Register a new session for an agent, or update an existing session's id.
 
     Args:
         agent: Agent name
@@ -44,19 +52,22 @@ def register(agent: str, session: str, session_id: str, cwd: str | None = None, 
     """
     now = datetime.now(timezone.utc).isoformat()
     data = _read()
-    session_data = {
-        "session_id": session_id,
-        "status": "running",
-        "created": now,
-        "tasks": [],
-    }
+    existing = data.get(agent, {}).get("sessions", {}).get(session, {})
 
-    # Add cwd if specified
-    if cwd:
+    session_data = dict(existing)  # preserve existing fields (goal, cwd, etc.)
+    session_data["session_id"] = session_id
+    session_data["status"] = "running"
+    if "created" not in session_data:
+        session_data["created"] = now
+    if "tasks" not in session_data:
+        session_data["tasks"] = []
+
+    # Add cwd if specified (don't overwrite existing)
+    if cwd and "cwd" not in session_data:
         session_data["cwd"] = cwd
 
-    # Add queue support for background sessions
-    if background:
+    # Add queue support for background sessions (only if not already set)
+    if background and "mode" not in session_data:
         session_data["mode"] = "background"
         session_data["queue"] = []
         session_data["current_task"] = None
@@ -252,3 +263,128 @@ def get_session_data(agent: str, session: str) -> dict | None:
         return data[agent]["sessions"][session]
     except KeyError:
         return None
+
+
+# ── goal ──────────────────────────────────────────────────────────────────
+
+def set_goal(agent: str, session: str, goal_text: str, max_iterations: int = 10) -> bool:
+    """Set a goal on a session. Fails if session has active queue.
+
+    Returns:
+        True if goal was set, False if session has active queue or doesn't exist.
+    """
+    data = _read()
+    try:
+        session_data = data[agent]["sessions"][session]
+        # Goal and queue are mutually exclusive
+        queue = session_data.get("queue", [])
+        current_task = session_data.get("current_task")
+        if queue or current_task:
+            return False
+        session_data["goal"] = {
+            "text": goal_text,
+            "max_iterations": max_iterations,
+            "current_iteration": 0,
+            "status": "active",
+            "started_at": datetime.now(timezone.utc).isoformat(),
+        }
+        _write(data)
+        return True
+    except KeyError:
+        return False
+
+
+def clear_goal(agent: str, session: str) -> bool:
+    """Remove goal from session. Returns True if a goal was cleared."""
+    data = _read()
+    try:
+        if "goal" in data[agent]["sessions"][session]:
+            del data[agent]["sessions"][session]["goal"]
+            _write(data)
+            return True
+        return False
+    except KeyError:
+        return False
+
+
+def cancel_goal(agent: str, session: str) -> bool:
+    """Mark goal as cancelled (worker checks this and stops)."""
+    data = _read()
+    try:
+        goal = data[agent]["sessions"][session].get("goal")
+        if goal and goal.get("status") == "active":
+            goal["status"] = "cancelled"
+            goal["last_update"] = datetime.now(timezone.utc).isoformat()
+            _write(data)
+            return True
+        return False
+    except KeyError:
+        return False
+
+
+def get_goal(agent: str, session: str) -> dict | None:
+    """Get goal data for a session, or None if no goal set."""
+    data = _read()
+    try:
+        return data[agent]["sessions"][session].get("goal")
+    except KeyError:
+        return None
+
+
+def has_active_goal(agent: str, session: str) -> bool:
+    """Check if session has an active (not cancelled/completed) goal."""
+    goal = get_goal(agent, session)
+    return goal is not None and goal.get("status") in ("active",)
+
+
+def has_active_queue(agent: str, session: str) -> bool:
+    """Check if session has an active queue (tasks queued or running)."""
+    data = _read()
+    try:
+        session_data = data[agent]["sessions"][session]
+        return bool(session_data.get("queue") or session_data.get("current_task"))
+    except KeyError:
+        return False
+
+
+def update_goal_iteration(agent: str, session: str, iteration: int, status: str = "active") -> None:
+    """Update goal progress (iteration counter and status)."""
+    data = _read()
+    try:
+        goal = data[agent]["sessions"][session].get("goal")
+        if goal:
+            goal["current_iteration"] = iteration
+            goal["status"] = status
+            goal["last_update"] = datetime.now(timezone.utc).isoformat()
+            _write(data)
+    except KeyError:
+        pass
+
+
+def mark_goal_complete(agent: str, session: str, iterations: int) -> None:
+    """Mark goal as successfully completed."""
+    data = _read()
+    try:
+        goal = data[agent]["sessions"][session].get("goal")
+        if goal:
+            goal["status"] = "completed"
+            goal["current_iteration"] = iterations
+            goal["completed_at"] = datetime.now(timezone.utc).isoformat()
+            _write(data)
+    except KeyError:
+        pass
+
+
+def mark_goal_failed(agent: str, session: str, iterations: int, reason: str = "max_iterations") -> None:
+    """Mark goal as failed (max iterations reached or error)."""
+    data = _read()
+    try:
+        goal = data[agent]["sessions"][session].get("goal")
+        if goal:
+            goal["status"] = "failed"
+            goal["current_iteration"] = iterations
+            goal["failed_reason"] = reason
+            goal["failed_at"] = datetime.now(timezone.utc).isoformat()
+            _write(data)
+    except KeyError:
+        pass

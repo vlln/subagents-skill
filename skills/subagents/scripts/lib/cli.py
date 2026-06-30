@@ -42,19 +42,29 @@ from backends.qwen import QwenBackend
 from lock import acquire, check, release
 from registry import (
     add_task,
+    cancel_goal,
+    clear_goal,
     complete,
     get_all_data,
+    get_goal,
+    get_session_data,
     get_session_id,
     get_session_id_from_any,
     get_session_status,
+    has_active_goal,
+    has_active_queue,
     list_sessions,
+    mark_goal_complete,
+    mark_goal_failed,
     register,
+    set_goal,
+    update_goal_iteration,
 )
 
 if TYPE_CHECKING:
     from backends.base import BaseBackend
 
-AGENTS_DIR = os.environ.get("SUBAGENT_AGENTS_DIR", ".agents/subagent")
+AGENTS_DIR = os.path.abspath(os.environ.get("SUBAGENT_AGENTS_DIR", ".agents/subagent"))
 OUTPUT_DIR = os.path.join(AGENTS_DIR, "outputs")
 
 BACKEND_MAP: dict[str, type[BaseBackend]] = {
@@ -268,6 +278,10 @@ def _run_with_agent(
     if check(session_name):
         _fail(f"session '{session_name}' is already running. Wait with: subagents wait {session_name}")
 
+    # Goal and direct run are mutually exclusive
+    if has_active_goal(agent_name, session_name):
+        _fail(f"session '{session_name}' has an active goal. Cancel it first with: subagents goal --clear {agent_name} {session_name}")
+
     lock_path = acquire(session_name)
 
     def _execute() -> int:
@@ -392,6 +406,12 @@ def _run_no_agent(
 
     if check(session_name):
         _fail(f"session '{session_name}' is already running. Wait with: subagents wait {session_name}")
+
+    # Goal and direct run are mutually exclusive
+    from registry import find_agent_for_session
+    owner = find_agent_for_session(session_name)
+    if owner and has_active_goal(owner, session_name):
+        _fail(f"session '{session_name}' has an active goal. Cancel it first with: subagents goal --clear {owner} {session_name}")
 
     existing_sid = get_session_id_from_any(session_name)
     lock_path = acquire(session_name)
@@ -648,6 +668,10 @@ def cmd_send(args: list[str]) -> None:
     if not session_data or session_data.get("mode") != "background":
         _fail(f"Session '{session_name}' is not a background session. Use 'run --bg' to start background sessions.")
 
+    # Goal and queue are mutually exclusive
+    if has_active_goal(agent_name, session_name):
+        _fail(f"Session '{session_name}' has an active goal. Cancel it first with: subagents goal --clear {agent_name} {session_name}")
+
     # Enqueue the task
     task_id = enqueue_task(agent_name, session_name, prompt)
     if task_id:
@@ -672,15 +696,18 @@ def cmd_send(args: list[str]) -> None:
 # ── cancel ────────────────────────────────────────────────────────────────
 
 def cmd_cancel(args: list[str]) -> None:
-    """Cancel queued tasks in a background session."""
+    """Cancel queued tasks or goal in a background session."""
     cancel_all = False
     task_index: int | None = None
+    cancel_goal_flag = False
 
     # Parse flags
     while args and args[0].startswith("--"):
         flag = args.pop(0)
         if flag == "--all":
             cancel_all = True
+        elif flag == "--goal":
+            cancel_goal_flag = True
         elif flag == "--task":
             task_str = args.pop(0) if args else _fail("--task requires a value")
             try:
@@ -693,7 +720,7 @@ def cmd_cancel(args: list[str]) -> None:
             _fail(f"unknown flag {flag}")
 
     if not args:
-        _fail("Usage: subagents cancel [--all | --task N] <session>")
+        _fail("Usage: subagents cancel [--all | --task N | --goal] <session>")
 
     session_name = args.pop(0)
 
@@ -703,6 +730,18 @@ def cmd_cancel(args: list[str]) -> None:
     agent_name = find_agent_for_session(session_name)
     if not agent_name:
         _fail(f"Session '{session_name}' not found")
+
+    # Cancel goal if requested
+    if cancel_goal_flag:
+        from registry import cancel_goal as cancel_goal_fn
+        if cancel_goal_fn(agent_name, session_name):
+            print(f"Goal cancelled", file=sys.stderr)
+            print(f"  Session: {session_name}", file=sys.stderr)
+            print(f"  The worker will stop after the current iteration", file=sys.stderr)
+        else:
+            print(f"No active goal", file=sys.stderr)
+            print(f"  Session: {session_name}", file=sys.stderr)
+        return
 
     # Get queue status before cancel
     session_data = get_session_data(agent_name, session_name)
@@ -738,6 +777,261 @@ def cmd_cancel(args: list[str]) -> None:
     else:
         print(f"Cancelled {count} task(s)", file=sys.stderr)
         print(f"  Session: {session_name}", file=sys.stderr)
+
+
+# ── goal ──────────────────────────────────────────────────────────────────
+
+def cmd_goal(args: list[str]) -> None:
+    """Set, show, or clear a goal on a session.
+
+    Usage:
+        subagents goal <agent> <session> "<goal>" [--max-iterations N]
+        subagents goal --show <agent> <session>
+        subagents goal --clear <agent> <session>
+    """
+    clear = False
+    show = False
+    max_iterations = 10
+    cwd: str | None = None
+    backend_override: str | None = None
+    transport: str | None = None
+
+    while args and args[0].startswith("--"):
+        flag = args.pop(0)
+        if flag == "--clear":
+            clear = True
+        elif flag == "--show":
+            show = True
+        elif flag == "--max-iterations":
+            val = args.pop(0) if args else _fail("--max-iterations requires a value")
+            try:
+                max_iterations = int(val)
+                if max_iterations < 1:
+                    _fail("--max-iterations must be >= 1")
+            except ValueError:
+                _fail(f"--max-iterations must be a number, got '{val}'")
+        elif flag == "--cwd":
+            cwd = args.pop(0) if args else _fail("--cwd requires a value")
+            cwd = os.path.abspath(cwd)
+        elif flag == "--backend":
+            backend_override = args.pop(0) if args else _fail("--backend requires a value")
+        elif flag == "--transport":
+            transport = args.pop(0) if args else _fail("--transport requires a value")
+            if transport not in ("cli", "acp"):
+                _fail(f"--transport must be 'cli' or 'acp', got '{transport}'")
+        else:
+            _fail(f"unknown flag {flag}")
+
+    if len(args) < 2:
+        _fail("Usage: subagents goal [--clear|--show] [--max-iterations N] [--cwd <path>] <agent> <session> [goal]")
+
+    agent_name = args[0]
+    session_name = args[1]
+    goal_text = " ".join(args[2:]) if len(args) > 2 else ""
+
+    # Verify agent exists
+    agent_path = Path(AGENTS_DIR) / f"{agent_name}.md"
+    if not agent_path.is_file():
+        _fail(f"agent '{agent_name}' not found (create .agents/subagent/{agent_name}.md first)")
+
+    # --clear: cancel active goal
+    if clear:
+        from registry import cancel_goal as cancel_goal_fn
+        if cancel_goal_fn(agent_name, session_name):
+            print(f"Goal cancelled", file=sys.stderr)
+            print(f"  Session: {session_name}", file=sys.stderr)
+            print(f"  The worker will stop after the current iteration", file=sys.stderr)
+        else:
+            print(f"No active goal to cancel", file=sys.stderr)
+            print(f"  Session: {session_name}", file=sys.stderr)
+        return
+
+    # --show or no goal text: display current goal
+    if show or not goal_text:
+        goal = get_goal(agent_name, session_name)
+        if not goal:
+            print(f"No active goal for {agent_name}/{session_name}", file=sys.stderr)
+        else:
+            status_icon = {"active": ">", "completed": "+", "failed": "x", "cancelled": "-"}.get(goal["status"], "?")
+            print(f"Goal: {goal['text']}", file=sys.stderr)
+            print(f"  Status:   {status_icon} {goal['status']}", file=sys.stderr)
+            print(f"  Progress: {goal['current_iteration']}/{goal['max_iterations']} iterations", file=sys.stderr)
+            if goal.get("failed_reason"):
+                print(f"  Reason:   {goal['failed_reason']}", file=sys.stderr)
+        return
+
+    # Set goal: handle new or existing session
+    session_data = get_session_data(agent_name, session_name)
+    sid = get_session_id(agent_name, session_name)
+    is_new_session = not session_data or not sid
+
+    if is_new_session:
+        # Check for lock conflicts
+        if check(session_name):
+            _fail(f"session '{session_name}' is already running. Wait for it to finish first.")
+        # Use --cwd if passed, otherwise default to current directory
+        if not cwd:
+            cwd = os.getcwd()
+    else:
+        # Check for queue conflict
+        if has_active_queue(agent_name, session_name):
+            _fail(f"Session '{session_name}' has an active task queue. Goal and queue are mutually exclusive.")
+
+        # Check if session has a running background worker (pid file)
+        lock_dir = Path(os.environ.get("SU BAGENT_LOCKS", ".agents/subagents/locks"))
+        pid_file = lock_dir / f"{session_name}.pid"
+        if pid_file.exists():
+            try:
+                pid = int(pid_file.read_text().strip())
+                os.kill(pid, 0)
+                _fail(f"Session '{session_name}' has a running background worker (pid {pid}). Stop it first.")
+            except (OSError, ValueError):
+                pid_file.unlink()
+
+        # Check if session is locked (running)
+        if check(session_name):
+            _fail(f"session '{session_name}' is already running. Wait for it to finish first.")
+
+        # If --cwd not explicitly passed, inherit from session
+        if not cwd:
+            cwd = session_data.get("cwd")
+
+    # Check for existing goal
+    existing = get_goal(agent_name, session_name)
+    if existing and existing.get("status") == "active":
+        _fail(f"Session '{session_name}' already has an active goal. Clear it first with: subagents goal --clear {agent_name} {session_name}")
+
+    # For new sessions, create a placeholder registry entry so set_goal works
+    if is_new_session:
+        register(agent_name, session_name, "", cwd=cwd, background=False)
+
+    # Set goal in registry
+    if not set_goal(agent_name, session_name, goal_text, max_iterations):
+        _fail(f"Failed to set goal on session '{session_name}'")
+
+    agent = parse_agent(agent_path)
+    backend_name = backend_override or _detect_backend()
+
+    print(f"[subagents] Goal set: {goal_text[:60]}{'...' if len(goal_text) > 60 else ''}", file=sys.stderr)
+    print(f"[subagents] Session: {session_name}{' (new)' if is_new_session else ''}", file=sys.stderr)
+    print(f"[subagents] Max iterations: {max_iterations}", file=sys.stderr)
+    if cwd:
+        print(f"[subagents] Working directory: {cwd}", file=sys.stderr)
+
+    # Acquire lock and start goal worker in background
+    lock_path = acquire(session_name)
+
+    def _goal_fn() -> int:
+        return _goal_worker(
+            agent_name=agent_name,
+            session_name=session_name,
+            session_id=sid,  # None for new sessions
+            goal_text=goal_text,
+            max_iterations=max_iterations,
+            agent_body=agent.body,
+            backend_override=backend_override,
+            transport=transport,
+            cwd=cwd,
+        )
+
+    _execute_in_background(session_name, lock_path, _goal_fn, output_json=False, agent_name=agent_name, queue_mode=False, cwd=cwd)
+
+
+def _goal_worker(
+    agent_name: str,
+    session_name: str,
+    session_id: str | None,
+    goal_text: str,
+    max_iterations: int,
+    agent_body: str | None,
+    backend_override: str | None,
+    transport: str | None,
+    cwd: str | None,
+) -> int:
+    """Goal worker: runs the agent in a loop until goal is met or max iterations reached.
+
+    session_id may be None for new sessions; the worker creates the session on first iteration.
+    Detection: after each iteration, checks a marker file for <GOAL_MET>.
+    """
+    marker_dir = Path(AGENTS_DIR) / "goals"
+    marker_dir.mkdir(parents=True, exist_ok=True)
+    marker_path = marker_dir / f"{session_name}.met"
+
+    # Build the goal prompt template
+    def _build_prompt(iteration: int) -> str:
+        return (
+            f"GOAL: {goal_text}\n\n"
+            f"Iteration {iteration}/{max_iterations}\n\n"
+            f"Work toward the goal above. You can see previous work from prior iterations "
+            f"in this session. When the goal is FULLY accomplished, write exactly "
+            f"<GOAL_MET> to the file: {marker_path}\n\n"
+            f"If the goal is not yet met, make as much progress as you can in this "
+            f"iteration. The next iteration will continue from where you left off."
+        )
+
+    exit_code = 0
+    for iteration in range(1, max_iterations + 1):
+        # Check if goal was cancelled
+        goal = get_goal(agent_name, session_name)
+        if not goal or goal.get("status") == "cancelled":
+            print(f"[subagents] Goal cancelled at iteration {iteration}", file=sys.stderr)
+            update_goal_iteration(agent_name, session_name, iteration - 1, "cancelled")
+            return 0
+
+        # Update registry with current iteration
+        update_goal_iteration(agent_name, session_name, iteration, "active")
+
+        # Delete any existing marker file before this iteration
+        if marker_path.exists():
+            marker_path.unlink()
+
+        # Change to cwd if specified
+        original_cwd = os.getcwd()
+        if cwd:
+            os.chdir(cwd)
+
+        try:
+            prompt = _build_prompt(iteration)
+            print(f"[subagents] Goal iteration {iteration}/{max_iterations}...", file=sys.stderr)
+
+            backend = _make_backend(backend_override, transport)
+            try:
+                if not session_id:
+                    # New session: create on first iteration
+                    session_id, exit_code = backend.create_session(prompt, agent_body, system_mode="append")
+                    register(agent_name, session_name, session_id, cwd=cwd, background=False)
+                    print(f"[subagents] Session created: {agent_name}/{session_name}", file=sys.stderr)
+                else:
+                    exit_code = backend.resume_session(session_id, prompt, agent_body, system_mode="append")
+            finally:
+                backend.close()
+
+            # Check for GOAL_MET marker
+            if marker_path.exists():
+                content = marker_path.read_text()
+                if "<GOAL_MET>" in content:
+                    print(f"[subagents] Goal met at iteration {iteration}!", file=sys.stderr)
+                    add_task(agent_name, session_name, goal_text, "done")
+                    mark_goal_complete(agent_name, session_name, iteration)
+                    complete(agent_name, session_name)
+                    return 0
+
+            # Record task for this iteration
+            add_task(agent_name, session_name, f"[goal:{iteration}/{max_iterations}] {goal_text[:80]}", "done" if exit_code == 0 else "failed")
+
+        except Exception as e:
+            print(f"[subagents] Goal iteration {iteration} error: {e}", file=sys.stderr)
+            import traceback
+            traceback.print_exc(file=sys.stderr)
+            exit_code = 1
+        finally:
+            os.chdir(original_cwd)
+
+    # Max iterations reached
+    print(f"[subagents] Goal max iterations ({max_iterations}) reached", file=sys.stderr)
+    mark_goal_failed(agent_name, session_name, max_iterations, "max_iterations")
+    complete(agent_name, session_name)
+    return exit_code
 
 
 # ── wait ──────────────────────────────────────────────────────────────────
@@ -927,9 +1221,16 @@ def cmd_status(args: list[str]) -> None:
     print()
     if session_name:
         sid = get_session_id(agent_name, session_name)
-        if not sid:
+        if sid is None:
             print(f"Session '{session_name}' not found for agent '{agent_name}'.")
             sys.exit(1)
+
+        if not sid:
+            # Session exists but backend hasn't created it yet (goal worker just started)
+            print(f"Session '{session_name}' is initializing...")
+            print(f"  Agent:  {agent.name}")
+            print(f"  Status: initializing")
+            sys.exit(0)
         status = get_session_status(agent_name, session_name)
 
         # Simple header
@@ -980,6 +1281,15 @@ def cmd_status(args: list[str]) -> None:
                     print(f"     {status_icon} {prompt}")
                 if len(tasks) > 3:
                     print(f"     ... and {len(tasks) - 3} more")
+
+            # Show goal if present
+            goal = session_data.get("goal")
+            if goal:
+                print(f"\n  Goal: {goal['text']}")
+                print(f"    Status:   {goal['status']}")
+                print(f"    Progress: {goal['current_iteration']}/{goal['max_iterations']} iterations")
+                if goal.get("failed_reason"):
+                    print(f"    Reason:   {goal['failed_reason']}")
         except KeyError:
             pass
     else:
@@ -1024,6 +1334,8 @@ def _status_json(args: list[str]) -> None:
                 status_data["queue"] = session_data["queue"]
             if "tasks" in session_data:
                 status_data["tasks"] = session_data["tasks"]
+            if "goal" in session_data:
+                status_data["goal"] = session_data["goal"]
         except KeyError:
             pass
 
@@ -1061,6 +1373,8 @@ def main() -> None:
         cmd_send(args)
     elif cmd == "cancel":
         cmd_cancel(args)
+    elif cmd == "goal":
+        cmd_goal(args)
     elif cmd == "wait":
         cmd_wait(args)
     elif cmd == "list":
@@ -1079,7 +1393,8 @@ def _print_help() -> None:
     print("  run [--bg] [--cwd <path>] [--backend <name>] [--transport cli|acp] [--system-mode append|overwrite] [--output json] <agent> <session> <prompt>", file=sys.stderr)
     print("  run [--bg] [--cwd <path>] [--output json] <session> <prompt>", file=sys.stderr)
     print("  send [--prompt-file <file>] <session> [prompt]    # Add task to background session queue", file=sys.stderr)
-    print("  cancel [--all | --task N] <session>                # Cancel queued tasks", file=sys.stderr)
+    print("  cancel [--all | --task N | --goal] <session>          # Cancel queued tasks or goal", file=sys.stderr)
+    print("  goal [--clear|--show] [--max-iterations N] [--cwd <path>] <agent> <session> [goal]", file=sys.stderr)
     print("  wait [--output json] <session>", file=sys.stderr)
     print("  list [--output json]", file=sys.stderr)
     print("  status [--output json] <agent> [session]", file=sys.stderr)

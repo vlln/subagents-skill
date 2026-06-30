@@ -13,11 +13,19 @@ from pathlib import Path
 _STALE_SECONDS = 30 * 60  # locks older than this are considered stale
 
 
+_cached_lock_dir: Path | None = None
+
+
 def _get_lock_dir() -> Path:
+    global _cached_lock_dir
+    if _cached_lock_dir is not None:
+        return _cached_lock_dir
     env = os.environ.get("SU BAGENT_LOCKS", "")
     if env:
-        return Path(env)
-    return Path(".agents/subagents/locks")
+        _cached_lock_dir = Path(env).resolve()
+    else:
+        _cached_lock_dir = Path(".agents/subagents/locks").resolve()
+    return _cached_lock_dir
 
 
 def _get_lock_path(session: str) -> Path:
