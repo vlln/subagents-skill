@@ -90,25 +90,107 @@ def run(agent, parallel, pipeline, phase, log, args, workflow):
 
 ## API Reference
 
-**agent(prompt, *, schema=None, label=None, backend=None, model=None)**
+### agent(prompt, *, schema=None, label=None, backend=None, model=None)
 
-Run a single subagent. Returns text, or a validated dict if `schema` is provided. Use `schema` when the result feeds into another stage or needs parsing. Use `label` for display in the live panel. Use `backend` to select a specific backend (e.g. `"claude"`, `"kimi"`). Use `model` to override the model for this agent call.
+Run a single subagent. Returns the agent's text output as a string, or a validated dict if `schema` is provided.
 
-**parallel(thunks)**
+| Param | Type | Description |
+|-------|------|-------------|
+| `prompt` | `str` | The task to run |
+| `schema` | `dict` | Optional JSON Schema — the agent is forced to produce structured output matching this schema, and the return value is validated |
+| `label` | `str` | Display label in the live progress panel |
+| `backend` | `str` | Override the backend (e.g. `"claude"`, `"kimi"`) |
+| `model` | `str` | Override the model for this agent call |
 
-Run thunks concurrently, wait for all, return results in input order. Failed thunks return `None` — filter with `[r for r in results if r is not None]`. Use only when you need all results before the next step.
+Returns `None` if the agent fails. Always filter results: `[r for r in results if r is not None]`.
 
-**pipeline(items, *stages)**
+```python
+# Simple text
+result = agent("Find all test files")
 
-Process each item through all stages independently. No barrier between stages: item A can be in stage 3 while item B is still in stage 1. Wall-clock time is the slowest single-item chain, not the sum of slowest-per-stage. Each stage receives `(prev_result, original_item, index)`. This is the default pattern — prefer it over parallel.
+# Structured output
+result = agent("Find test files", schema={
+    "type": "object",
+    "properties": {"files": {"type": "array", "items": {"type": "string"}}},
+    "required": ["files"],
+})
+# result["files"] → validated list of strings
 
-**phase(title)** / **log(message)**
+# Specific backend and model
+result = agent("Review code", backend="claude", model="sonnet")
+```
 
-Emit progress to stderr. `phase` groups subsequent agent calls under a heading; `log` prints a single narrator line.
+### parallel(thunks)
 
-**args**
+Run multiple thunks concurrently. Each thunk is a zero-argument callable (typically a `lambda:`). Returns a list of results in input order. Failed thunks produce `None` instead of raising.
 
-Value passed as `--args` on the CLI. Pass arrays/objects as actual JSON values, not JSON-encoded strings.
+```python
+results = parallel([
+    lambda: agent("Security review"),
+    lambda: agent("Performance review"),
+    lambda: agent("Style review"),
+])
+# results = ["security ok", "perf: 3 issues", None]  # style review failed
+```
+
+### pipeline(items, *stages)
+
+Process each item through all stages independently. No barrier: item A can be in stage 3 while item B is still in stage 1. Each stage callback receives `(prev_result, original_item, index)`. If a stage raises or returns `None`, remaining stages for that item are skipped.
+
+```python
+results = pipeline(
+    ["file1.py", "file2.py"],
+
+    # Stage 1: receives (item, index)
+    lambda item, idx: agent(f"Analyze {item}"),
+
+    # Stage 2: receives (prev_result, original_item, index)
+    lambda analysis, item, idx: agent(f"Fix {item}: {analysis}"),
+
+    # Stage 3: receives (prev_result, original_item, index)
+    lambda fix, item, idx: agent(f"Verify {item}"),
+)
+```
+
+### phase(title) / log(message)
+
+Emit progress to stderr. `phase` groups subsequent agent calls under a heading in the live panel; `log` prints a single narrator line.
+
+```python
+phase("Scan")
+log(f"Processing {len(files)} files")
+```
+
+### args
+
+Value passed via `--args` on the CLI. Access as a dict in the script:
+
+```bash
+workflow run script.py --args '{"target": "src/", "depth": 3}'
+```
+
+```python
+def run(agent, parallel, pipeline, phase, log, args, workflow):
+    target = args["target"]  # "src/"
+```
+
+### workflow(script_path, args)
+
+Invoke another workflow script as a sub-step. Returns the child workflow's result. Nesting is limited to one level.
+
+```python
+result = workflow("other_workflow.py", {"param": "value"})
+```
+
+## CLI Commands
+
+```bash
+workflow run <script.py> [--args '<json>'] [--resume <id>]
+workflow resume <run_id> <script.py>
+workflow list
+workflow status <run_id>
+workflow stop <run_id>
+```
 
 ## Prompt Writing
 
