@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/vlln/subagents-skill/stargazers"><img src="https://badgen.net/github/stars/vlln/subagents-skill?label=%E2%98%85" alt="GitHub stars" /></a>
-  <img src="https://badgen.net/github/license/vlln/subagents-skill" alt="License" />
+  <img src="https://badgen.net/badge/license/MIT/blue" alt="MIT" />
   <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10+" />
   <img src="https://img.shields.io/badge/dependencies-zero-44CC11?style=flat-square" alt="Zero dependencies" />
   <img src="https://img.shields.io/badge/spec-Agent%20Skills-8257D0?style=flat-square" alt="Agent Skills spec" />
