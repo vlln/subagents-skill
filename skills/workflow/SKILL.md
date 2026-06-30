@@ -27,22 +27,7 @@ metadata:
 
 Commands below assume `workflow` is on PATH or invoked from the skill directory. Examples use the short form `workflow` for brevity.
 
-Use `workflow` to orchestrate multiple AI agents in parallel or pipeline patterns.
-
-**Quick start:**
-
-```bash
-# 1. Agent writes the script
-cat > .agents/workflow/hello.py << 'EOF'
-meta = {"name": "hello", "description": "Simple workflow"}
-def run(agent, parallel, pipeline, phase, log, args, workflow):
-    phase("Greet")
-    return {"result": agent("say hello")}
-EOF
-
-# 2. Agent executes it
-workflow run .agents/workflow/hello.py
-```
+Use `workflow` to orchestrate multiple AI agents in parallel or pipeline patterns. A workflow script is a Python file that defines `run(agent, parallel, pipeline, phase, log, args, workflow)` — the agent writes the script, then executes it.
 
 ## Dependencies
 
@@ -50,65 +35,32 @@ Requires the [subagents](https://github.com/vlln/subagents-skill/blob/main/skill
 
 ## When To Use
 
-- Split a large task across multiple agents working in parallel.
-- Run multi-stage pipelines (scan → analyze → fix → verify).
-- Fan-out analysis across dimensions (security, performance, style) then synthesize.
-- Discover work items dynamically, then process them in batches.
-- Adversarial verify: generate → review → refine cycles.
+- Multi-perspective analysis: fan out across dimensions (security, performance, style) then synthesize.
+- Multi-stage pipelines: scan, analyze, fix, verify — each stage builds on the previous.
+- Bulk operations: migrate, audit, or transform many files at once.
+- Adversarial verification: generate a solution, have another agent find flaws, refine.
+- Discovery-driven work: first find what needs doing, then process each item.
 
-## How To Use
+Don't use for simple single-file edits or tasks a single agent call can handle.
 
-### 1. Write the script
+## Quick Start
 
-The agent writes the workflow script to a file. Use `.agents/workflow/` for project-scoped scripts or `/tmp/` for one-off runs.
-
-```python
-# .agents/workflow/code-review.py
-meta = {"name": "code-review", "description": "..."}
-
+```bash
+# 1. Write the script
+cat > .agents/workflow/hello.py << 'EOF'
+meta = {"name": "hello", "description": "Simple workflow"}
 def run(agent, parallel, pipeline, phase, log, args, workflow):
-    ...
+    phase("Greet")
+    return {"result": agent("say hello")}
+EOF
+
+# 2. Execute
+workflow run .agents/workflow/hello.py
 ```
 
-### 2. Execute
-
-```bash
-workflow run .agents/workflow/code-review.py
-```
-
-With arguments:
-
-```bash
-workflow run .agents/workflow/code-review.py --args '{"target": "src/"}'
-```
-
-### 3. Resume on failure
-
-If the workflow crashes (timeout, agent failure), re-run with the same `--resume` ID. Completed sessions are skipped.
-
-```bash
-# First run
-workflow run script.py --resume myrun001
-
-# Crash... resume:
-workflow resume myrun001 script.py
-```
-
-### 4. Check results
-
-`run()` returns a dict which is printed as JSON to stdout. Diagnostics go to stderr.
-
-```json
-{"status": "complete", "findings": 3, "summary": "..."}
-```
-
-## Workflow Script
-
-A workflow script is a Python file that defines `run()`:
+## Script Structure
 
 ```python
-# my_workflow.py
-
 meta = {
     "name": "code-review",
     "description": "Multi-perspective code review",
@@ -131,167 +83,105 @@ def run(agent, parallel, pipeline, phase, log, args, workflow):
     ])
 
     phase("Synthesis")
-    summary = agent(f"Synthesize:\n{reviews}")
-    return {"status": "done", "summary": summary}
+    return {"status": "done", "summary": agent(f"Synthesize:\n{reviews}")}
 ```
+
+`meta` must be a pure literal — no variables, function calls, or template strings. `phase()` titles must match `meta.phases` titles exactly.
 
 ## API Reference
 
-### agent(prompt, *, schema=None, label=None, model=None, backend=None)
+**agent(prompt, *, schema=None, label=None, backend=None, model=None)**
 
-Run a single subagent. Returns text output, or structured dict if `schema` is provided.
+Run a single subagent. Returns text, or a validated dict if `schema` is provided. Use `schema` when the result feeds into another stage or needs parsing. Use `label` for display in the live panel. Use `backend` to select a specific backend (e.g. `"claude"`, `"kimi"`). Use `model` to override the model for this agent call.
 
-| Param | Type | Description |
-|-------|------|-------------|
-| `prompt` | `str` | The task to run |
-| `schema` | `dict` | Optional JSON Schema for structured output |
-| `label` | `str` | Display label in the live panel |
-| `model` | `str` | Override the model |
-| `backend` | `str` | Override the backend (e.g. `"claude"`, `"kimi"`) |
+**parallel(thunks)**
 
-```python
-# Simple text
-result = agent("Find all test files")
+Run thunks concurrently, wait for all, return results in input order. Failed thunks return `None` — filter with `[r for r in results if r is not None]`. Use only when you need all results before the next step.
 
-# With a specific backend
-result = agent("Review for security", backend="claude")
+**pipeline(items, *stages)**
 
-# Structured output
-result = agent("Find all test files", schema={
-    "type": "object",
-    "properties": {"files": {"type": "array", "items": {"type": "string"}}}
-})
-```
+Process each item through all stages independently. No barrier between stages: item A can be in stage 3 while item B is still in stage 1. Wall-clock time is the slowest single-item chain, not the sum of slowest-per-stage. Each stage receives `(prev_result, original_item, index)`. This is the default pattern — prefer it over parallel.
 
-### parallel(thunks)
+**phase(title)** / **log(message)**
 
-Run thunks concurrently. Returns list of results in input order. Failed thunks return `None`.
+Emit progress to stderr. `phase` groups subsequent agent calls under a heading; `log` prints a single narrator line.
 
-```python
-results = parallel([
-    lambda: agent("Security review"),
-    lambda: agent("Performance review"),
-    lambda: agent("Style review"),
-])
-# results = ["...", "...", "..."]
-```
+**args**
 
-### pipeline(items, *stages)
+Value passed as `--args` on the CLI. Pass arrays/objects as actual JSON values, not JSON-encoded strings.
 
-Process items through stages. Each item flows independently — no barrier between stages.
+## Prompt Writing
 
-```python
-results = pipeline(
-    ["file1.py", "file2.py"],
+Each `agent()` call is a self-contained task. Four elements make a good prompt:
 
-    # Stage 1: receives (item, index)
-    lambda item, idx: agent(f"Analyze {item}"),
+- **Goal**: one sentence describing the task.
+- **Scope**: what to examine, what to skip, constraints.
+- **Steps**: ordered list guiding execution.
+- **Output**: expected format — plain text, or a JSON Schema for structured data.
 
-    # Stage 2: receives (prev_result, original_item, index)
-    lambda prev, item, idx: agent(f"Fix {item}: {prev}"),
-)
-```
+Common mistakes: vague prompts ("check the code"), passing file content instead of file paths (bloats context), forgetting to handle `None` returns from failed agents.
 
-### phase(title)
+## Design Decisions
 
-Log a phase transition to stderr.
+**Default to pipeline.** Only use parallel when you genuinely need all results together before proceeding. Nesting parallel barriers (wait for all, then wait for all again) is a common performance mistake — pipeline eliminates those barriers.
 
-```python
-phase("Scan")
-```
-
-### log(message)
-
-Log a progress message to stderr.
-
-```python
-log(f"Processing {len(items)} files")
-```
+**Early filter, then deep-dive.** Scan cheaply first to identify targets, then apply expensive processing only to what matters.
 
 ## Patterns
 
-### Fan-out Gather
+**Fan-out gather:** run parallel reviews across dimensions (security, performance, style), then synthesize a single summary.
 
-```python
-phase("Analyze")
-results = parallel([
-    lambda: agent("Check security", backend="claude"),
-    lambda: agent("Check performance", backend="kimi"),
-])
+**Pipeline:** process each file through parse, transform, validate stages. Files flow independently with no barrier.
 
-phase("Summarize")
-summary = agent(f"Summarize: {results}")
-```
+**Adversarial verify:** generate a solution, have another agent find flaws, refine if needed. Repeat until clean.
 
-### Pipeline
+**Discover then deep-dive:** first scan to find work items, then pipeline each item through processing stages.
 
-```python
-results = pipeline(
-    file_list,
-    lambda f, i: agent(f"Parse {f}"),
-    lambda ast, f, i: agent(f"Transform {f}"),
-    lambda t, f, i: agent(f"Validate {f}"),
-)
-```
+**Loop until dry:** repeatedly search for issues with diverse finders, deduplicate, fix, and continue until no new findings appear for two consecutive rounds.
 
-### Adversarial Verify
+## Performance
 
-```python
-phase("Generate")
-solution = agent("Generate solution")
-
-phase("Verify")
-flaws = agent(f"Find flaws in: {solution}")
-
-if flaws:
-    phase("Refine")
-    solution = agent(f"Fix: {flaws}")
-```
+| Pattern | Agents | Time | Tokens |
+|---------|--------|------|--------|
+| Single analysis | 1 | 10-30s | 5-20k |
+| 3-dimension parallel review | 3 | 30-60s | 20-60k |
+| 10-file pipeline (3-stage) | 30 | 2-5min | 100-300k |
+| Deep research (10 sources) | 15-20 | 3-8min | 150-400k |
 
 ## Monitoring
 
-Workflow prints live progress to stderr during execution, and a summary table on completion.
-
-### CLI Commands
+Workflow prints live progress to stderr during execution. CLI commands:
 
 ```bash
-# List all workflow runs with session status
-workflow list
-# Run: abc123
-#   ✓ wf_abc123_1  [done]  Review security
-#   … wf_abc123_2  [running]  Review performance
-
-# Detailed status of a single run
-workflow status abc123
-# Run: abc123
-# Sessions: 1 done, 1 running, 0 failed (total 2)
-
-# Stop a running workflow
-workflow stop abc123
-# Stopped 1 session(s) in run 'abc123'.
+workflow list              # all runs with session status
+workflow status <run_id>   # detailed status of one run
+workflow stop <run_id>     # stop a running workflow
 ```
 
-## Mock Mode (Testing)
+## Resume
 
-For testing without a real backend, enable mock mode at the top of your workflow script:
+If a workflow crashes, re-run with `--resume <id>`. Completed sessions are skipped.
+
+```bash
+workflow run script.py --resume myrun001
+workflow resume myrun001 script.py
+```
+
+## Mock Mode
+
+For testing without a real backend:
 
 ```python
 from runtime import set_mock
-set_mock("shell")
-
-# agent() now executes the prompt as a shell command
-agent("echo security ok")          # → "security ok"
-agent("sleep 2 && echo done")      # → "done" (2s delay)
+set_mock("shell")  # agent() now executes prompts as shell commands
+set_mock(None)     # restore real subagent execution
 ```
-
-Set `set_mock(None)` to restore real subagent execution.
 
 ## Rules
 
 - Each `agent()` call creates a session via `subagents run --bg --output json`.
-- Use `backend` to select a specific backend per agent: `agent("...", backend="claude")`.
-- Sessions are named `wf_<uuid>` and cleaned up automatically.
 - `parallel()` uses threads; all agents run concurrently.
-- `pipeline()` has no inter-stage barrier — items flow independently.
-- Return `None` from `run()` to suppress JSON output.
+- `pipeline()` has no inter-stage barrier.
+- Sessions are named `wf_<uuid>` and cleaned up automatically.
 - Diagnostics and live display go to stderr; workflow output goes to stdout.
+- Return `None` from `run()` to suppress JSON output.
