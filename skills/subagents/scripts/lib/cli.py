@@ -6,7 +6,28 @@ import json
 import os
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
+
+
+class _CRLFWrapper:
+    """Wrap a stream to ensure \r before every \n for proper terminal rendering."""
+
+    def __init__(self, stream):
+        self._stream = stream
+
+    def write(self, s: str) -> int:
+        return self._stream.write(s.replace("\n", "\r\n"))
+
+    def flush(self) -> None:
+        self._stream.flush()
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+
+sys.stderr = _CRLFWrapper(sys.stderr)
+sys.stdout = _CRLFWrapper(sys.stdout)
 from typing import TYPE_CHECKING, Callable
 
 from agent import list_agents, parse_agent
@@ -171,11 +192,16 @@ def cmd_run(args: list[str]) -> None:
     transport: str | None = None
     system_mode = "append"
     output_json = False
+    cwd: str | None = None
 
     while args and args[0].startswith("--"):
         flag = args.pop(0)
         if flag == "--bg":
             bg = True
+        elif flag == "--cwd":
+            cwd = args.pop(0) if args else _fail("--cwd requires a value")
+            # Convert to absolute path
+            cwd = os.path.abspath(cwd)
         elif flag == "--backend":
             backend_override = args.pop(0) if args else _fail("--backend requires a value")
         elif flag == "--transport":
@@ -195,7 +221,7 @@ def cmd_run(args: list[str]) -> None:
             _fail(f"unknown flag {flag}")
 
     if len(args) < 2:
-        _fail("Usage: subagents run [--bg] [--backend <name>] <agent> <session> <prompt>")
+        _fail("Usage: subagents run [--bg] [--cwd <path>] [--backend <name>] <agent> <session> <prompt>")
 
     arg1 = args[0]
     agent_path = Path(AGENTS_DIR) / f"{arg1}.md"
@@ -205,14 +231,14 @@ def cmd_run(args: list[str]) -> None:
         session_name = args.pop(0) if args else ""
         task = " ".join(args) if args else ""
         if not session_name or not task:
-            _fail("Usage: subagents run [--bg] <agent> <session> <prompt>")
-        _run_with_agent(agent_name, session_name, task, bg, backend_override, transport, system_mode, output_json)
+            _fail("Usage: subagents run [--bg] [--cwd <path>] <agent> <session> <prompt>")
+        _run_with_agent(agent_name, session_name, task, bg, backend_override, transport, system_mode, output_json, cwd)
     else:
         session_name = args.pop(0)
         task = " ".join(args) if args else ""
         if not task:
-            _fail("Usage: subagents run [--bg] <session> <prompt>")
-        _run_no_agent(session_name, task, bg, backend_override, transport, output_json)
+            _fail("Usage: subagents run [--bg] [--cwd <path>] <session> <prompt>")
+        _run_no_agent(session_name, task, bg, backend_override, transport, output_json, cwd)
 
 
 def _run_with_agent(
@@ -224,17 +250,20 @@ def _run_with_agent(
     transport: str | None,
     system_mode: str,
     output_json: bool,
+    cwd: str | None = None,
 ) -> None:
     agent = parse_agent(Path(AGENTS_DIR) / f"{agent_name}.md")
     backend_name = backend_override or _detect_backend()
 
     if output_json:
-        _run_with_agent_json(agent, agent_name, session_name, task, bg, backend_name, backend_override, transport, system_mode)
+        _run_with_agent_json(agent, agent_name, session_name, task, bg, backend_name, backend_override, transport, system_mode, cwd)
         return
 
     print(f"[subagents] Agent: {agent.name} — {agent.description}", file=sys.stderr)
     print(f"[subagents] Session name: {session_name}", file=sys.stderr)
     print(f"[subagents] Backend: {backend_name}", file=sys.stderr)
+    if cwd:
+        print(f"[subagents] Working directory: {cwd}", file=sys.stderr)
 
     if check(session_name):
         _fail(f"session '{session_name}' is already running. Wait with: subagents wait {session_name}")
@@ -242,29 +271,38 @@ def _run_with_agent(
     lock_path = acquire(session_name)
 
     def _execute() -> int:
-        backend = _make_backend(backend_override, transport)
-        try:
-            existing_sid = get_session_id(agent_name, session_name)
-            if existing_sid:
-                print("[subagents] Resuming existing session...", file=sys.stderr)
-                exit_code = backend.resume_session(existing_sid, task, agent.body or None, system_mode=system_mode)
-            else:
-                print("[subagents] Creating new session...", file=sys.stderr)
-                sid, exit_code = backend.create_session(task, agent.body or None, system_mode=system_mode)
-                register(agent_name, session_name, sid)
-                print(f"[subagents] Session registered: {agent_name}/{session_name}", file=sys.stderr)
-        finally:
-            backend.close()
+        # Change to specified working directory if provided
+        original_cwd = os.getcwd()
+        if cwd:
+            os.chdir(cwd)
 
-        task_status = "done" if exit_code == 0 else "failed"
-        add_task(agent_name, session_name, task, task_status)
-        complete(agent_name, session_name)
-        release(lock_path)
-        print(f"[subagents] Session {session_name} completed", file=sys.stderr)
-        return exit_code
+        try:
+            backend = _make_backend(backend_override, transport)
+            try:
+                existing_sid = get_session_id(agent_name, session_name)
+                if existing_sid:
+                    print("[subagents] Resuming existing session...", file=sys.stderr)
+                    exit_code = backend.resume_session(existing_sid, task, agent.body or None, system_mode=system_mode)
+                else:
+                    print("[subagents] Creating new session...", file=sys.stderr)
+                    sid, exit_code = backend.create_session(task, agent.body or None, system_mode=system_mode)
+                    register(agent_name, session_name, sid, cwd=cwd, background=bg)
+                    print(f"[subagents] Session registered: {agent_name}/{session_name}", file=sys.stderr)
+            finally:
+                backend.close()
+
+            task_status = "done" if exit_code == 0 else "failed"
+            add_task(agent_name, session_name, task, task_status)
+            complete(agent_name, session_name)
+            release(lock_path)
+            print(f"[subagents] Session {session_name} completed", file=sys.stderr)
+            return exit_code
+        finally:
+            # Restore original working directory
+            os.chdir(original_cwd)
 
     if bg:
-        _execute_in_background(session_name, lock_path, _execute, output_json=False)
+        _execute_in_background(session_name, lock_path, _execute, output_json=False, agent_name=agent_name, queue_mode=True, cwd=cwd)
     else:
         sys.exit(_execute())
 
@@ -279,6 +317,7 @@ def _run_with_agent_json(
     backend_override: str | None,
     transport: str | None,
     system_mode: str,
+    cwd: str | None = None,
 ) -> None:
     emitter = JsonlEmitter()
     emitter.agent_start(session_name, agent=agent_name, backend=backend_name)
@@ -290,25 +329,34 @@ def _run_with_agent_json(
     lock_path = acquire(session_name)
 
     def _execute(emit: JsonlEmitter) -> int:
-        th = _make_text_handler(emit, session_name)
-        backend = _make_backend(backend_override, transport, text_handler=th)
-        try:
-            existing_sid = get_session_id(agent_name, session_name)
-            if existing_sid:
-                exit_code = backend.resume_session(existing_sid, task, agent.body or None, system_mode=system_mode)
-            else:
-                sid, exit_code = backend.create_session(task, agent.body or None, system_mode=system_mode)
-                register(agent_name, session_name, sid)
-        finally:
-            backend.close()
+        # Change to specified working directory if provided
+        original_cwd = os.getcwd()
+        if cwd:
+            os.chdir(cwd)
 
-        task_status = "done" if exit_code == 0 else "failed"
-        add_task(agent_name, session_name, task, task_status)
-        complete(agent_name, session_name)
-        emit.agent_done(session_name, exit_code=exit_code)
-        emit.close()
-        release(lock_path)
-        return exit_code
+        try:
+            th = _make_text_handler(emit, session_name)
+            backend = _make_backend(backend_override, transport, text_handler=th)
+            try:
+                existing_sid = get_session_id(agent_name, session_name)
+                if existing_sid:
+                    exit_code = backend.resume_session(existing_sid, task, agent.body or None, system_mode=system_mode)
+                else:
+                    sid, exit_code = backend.create_session(task, agent.body or None, system_mode=system_mode)
+                    register(agent_name, session_name, sid, cwd=cwd, background=bg)
+            finally:
+                backend.close()
+
+            task_status = "done" if exit_code == 0 else "failed"
+            add_task(agent_name, session_name, task, task_status)
+            complete(agent_name, session_name)
+            emit.agent_done(session_name, exit_code=exit_code)
+            emit.close()
+            release(lock_path)
+            return exit_code
+        finally:
+            # Restore original working directory
+            os.chdir(original_cwd)
 
     if bg:
         output_file = _jsonl_output_path(session_name)
@@ -316,7 +364,7 @@ def _run_with_agent_json(
         file_emitter = JsonlEmitter(open(output_file, "w"))
         file_emitter.agent_start(session_name, agent=agent_name, backend=backend_name)
         emitter.close()
-        _execute_in_background(session_name, lock_path, lambda: _execute(file_emitter), output_json=True)
+        _execute_in_background(session_name, lock_path, lambda: _execute(file_emitter), output_json=True, agent_name=agent_name, queue_mode=True, cwd=cwd)
     else:
         sys.exit(_execute(emitter))
 
@@ -328,16 +376,19 @@ def _run_no_agent(
     backend_override: str | None,
     transport: str | None,
     output_json: bool,
+    cwd: str | None = None,
 ) -> None:
     """Run without agent file — create if new, resume if exists."""
     backend_name = backend_override or _detect_backend()
 
     if output_json:
-        _run_no_agent_json(session_name, task, bg, backend_name, backend_override, transport)
+        _run_no_agent_json(session_name, task, bg, backend_name, backend_override, transport, cwd)
         return
 
     print(f"[subagents] Session name: {session_name}", file=sys.stderr)
     print(f"[subagents] Backend: {backend_name}", file=sys.stderr)
+    if cwd:
+        print(f"[subagents] Working directory: {cwd}", file=sys.stderr)
 
     if check(session_name):
         _fail(f"session '{session_name}' is already running. Wait with: subagents wait {session_name}")
@@ -346,28 +397,37 @@ def _run_no_agent(
     lock_path = acquire(session_name)
 
     def _execute() -> int:
-        backend = _make_backend(backend_override, transport)
-        try:
-            if existing_sid:
-                print("[subagents] Resuming existing session...", file=sys.stderr)
-                exit_code = backend.resume_session(existing_sid, task)
-            else:
-                print("[subagents] Creating new session...", file=sys.stderr)
-                sid, exit_code = backend.create_session(task)
-                register(session_name, session_name, sid)
-                print(f"[subagents] Session registered: {session_name}", file=sys.stderr)
-        finally:
-            backend.close()
+        # Change to specified working directory if provided
+        original_cwd = os.getcwd()
+        if cwd:
+            os.chdir(cwd)
 
-        task_status = "done" if exit_code == 0 else "failed"
-        add_task(session_name, session_name, task, task_status)
-        complete(session_name, session_name)
-        release(lock_path)
-        print(f"[subagents] Session {session_name} completed", file=sys.stderr)
-        return exit_code
+        try:
+            backend = _make_backend(backend_override, transport)
+            try:
+                if existing_sid:
+                    print("[subagents] Resuming existing session...", file=sys.stderr)
+                    exit_code = backend.resume_session(existing_sid, task)
+                else:
+                    print("[subagents] Creating new session...", file=sys.stderr)
+                    sid, exit_code = backend.create_session(task)
+                    register(session_name, session_name, sid, cwd=cwd, background=bg)
+                    print(f"[subagents] Session registered: {session_name}", file=sys.stderr)
+            finally:
+                backend.close()
+
+            task_status = "done" if exit_code == 0 else "failed"
+            add_task(session_name, session_name, task, task_status)
+            complete(session_name, session_name)
+            release(lock_path)
+            print(f"[subagents] Session {session_name} completed", file=sys.stderr)
+            return exit_code
+        finally:
+            # Restore original working directory
+            os.chdir(original_cwd)
 
     if bg:
-        _execute_in_background(session_name, lock_path, _execute, output_json=False)
+        _execute_in_background(session_name, lock_path, _execute, output_json=False, agent_name=session_name, queue_mode=True, cwd=cwd)
     else:
         sys.exit(_execute())
 
@@ -379,6 +439,7 @@ def _run_no_agent_json(
     backend_name: str,
     backend_override: str | None,
     transport: str | None,
+    cwd: str | None = None,
 ) -> None:
     emitter = JsonlEmitter()
     emitter.agent_start(session_name, backend=backend_name)
@@ -391,24 +452,33 @@ def _run_no_agent_json(
     lock_path = acquire(session_name)
 
     def _execute(emit: JsonlEmitter) -> int:
-        th = _make_text_handler(emit, session_name)
-        backend = _make_backend(backend_override, transport, text_handler=th)
-        try:
-            if existing_sid:
-                exit_code = backend.resume_session(existing_sid, task)
-            else:
-                sid, exit_code = backend.create_session(task)
-                register(session_name, session_name, sid)
-        finally:
-            backend.close()
+        # Change to specified working directory if provided
+        original_cwd = os.getcwd()
+        if cwd:
+            os.chdir(cwd)
 
-        task_status = "done" if exit_code == 0 else "failed"
-        add_task(session_name, session_name, task, task_status)
-        complete(session_name, session_name)
-        emit.agent_done(session_name, exit_code=exit_code)
-        emit.close()
-        release(lock_path)
-        return exit_code
+        try:
+            th = _make_text_handler(emit, session_name)
+            backend = _make_backend(backend_override, transport, text_handler=th)
+            try:
+                if existing_sid:
+                    exit_code = backend.resume_session(existing_sid, task)
+                else:
+                    sid, exit_code = backend.create_session(task)
+                    register(session_name, session_name, sid, cwd=cwd, background=bg)
+            finally:
+                backend.close()
+
+            task_status = "done" if exit_code == 0 else "failed"
+            add_task(session_name, session_name, task, task_status)
+            complete(session_name, session_name)
+            emit.agent_done(session_name, exit_code=exit_code)
+            emit.close()
+            release(lock_path)
+            return exit_code
+        finally:
+            # Restore original working directory
+            os.chdir(original_cwd)
 
     if bg:
         output_file = _jsonl_output_path(session_name)
@@ -416,7 +486,7 @@ def _run_no_agent_json(
         file_emitter = JsonlEmitter(open(output_file, "w"))
         file_emitter.agent_start(session_name, backend=backend_name)
         emitter.close()
-        _execute_in_background(session_name, lock_path, lambda: _execute(file_emitter), output_json=True)
+        _execute_in_background(session_name, lock_path, lambda: _execute(file_emitter), output_json=True, agent_name=session_name, queue_mode=True, cwd=cwd)
     else:
         sys.exit(_execute(emitter))
 
@@ -425,7 +495,71 @@ def _jsonl_output_path(session_name: str) -> str:
     return os.path.join(OUTPUT_DIR, f"{session_name}.jsonl")
 
 
-def _execute_in_background(session_name: str, lock_path: Path, fn, output_json: bool = False) -> None:
+def _queue_worker(agent_name: str, session_name: str, initial_task_fn, cwd: str | None) -> int:
+    """Background worker that processes initial task and then queue.
+
+    Returns exit code of last executed task.
+    """
+    from registry import dequeue_task, set_current_task, get_session_data
+
+    # Execute initial task
+    exit_code = initial_task_fn()
+
+    # Process queue
+    while True:
+        # Check if there are more tasks in queue
+        task = dequeue_task(agent_name, session_name)
+        if task is None:
+            # Queue is empty, exit
+            break
+
+        # Update current_task in registry
+        task["status"] = "running"
+        task["start_time"] = datetime.now(timezone.utc).isoformat()
+        set_current_task(agent_name, session_name, task)
+
+        # Change to cwd if specified
+        if cwd:
+            os.chdir(cwd)
+
+        # Execute the queued task
+        from registry import get_session_id, add_task, complete
+
+        print(f"[subagents] Processing queued task: {task['id']}", file=sys.stderr)
+
+        # Get session data to resume
+        session_data = get_session_data(agent_name, session_name)
+        if not session_data:
+            print(f"[subagents] Session data lost, aborting", file=sys.stderr)
+            exit_code = 1
+            break
+
+        sid = session_data["session_id"]
+
+        # Create backend and execute task
+        backend = _make_backend(None, None)  # Use defaults
+        try:
+            exit_code = backend.resume_session(sid, task["prompt"])
+        except Exception as e:
+            print(f"[subagents] Task failed: {e}", file=sys.stderr)
+            exit_code = 1
+        finally:
+            backend.close()
+
+        # Record task completion
+        task_status = "done" if exit_code == 0 else "failed"
+        task_elapsed = (datetime.now(timezone.utc) - datetime.fromisoformat(task["start_time"])).total_seconds()
+        add_task(agent_name, session_name, task["prompt"], task_status)
+
+        # Clear current_task
+        set_current_task(agent_name, session_name, None)
+
+        print(f"[subagents] Task {task['id']} {task_status} ({task_elapsed:.1f}s)", file=sys.stderr)
+
+    return exit_code
+
+
+def _execute_in_background(session_name: str, lock_path: Path, fn, output_json: bool = False, agent_name: str | None = None, queue_mode: bool = False, cwd: str | None = None) -> None:
     if not hasattr(os, "fork"):
         release(lock_path)
         _fail("Background mode (--bg) requires Unix (os.fork not available on this platform)")
@@ -433,7 +567,13 @@ def _execute_in_background(session_name: str, lock_path: Path, fn, output_json: 
     pid = os.fork()
     if pid == 0:
         os.setsid()
-        exit_code = fn()
+
+        # If queue mode, wrap fn with queue worker
+        if queue_mode and agent_name:
+            exit_code = _queue_worker(agent_name, session_name, fn, cwd)
+        else:
+            exit_code = fn()
+
         os._exit(exit_code)
     else:
         pid_file = lock_path.parent / f"{session_name}.pid"
@@ -442,8 +582,162 @@ def _execute_in_background(session_name: str, lock_path: Path, fn, output_json: 
             output_file = Path(OUTPUT_DIR) / f"{session_name}.out"
             print(f"[subagents] Background task started: {session_name} (pid: {pid})", file=sys.stderr)
             print(f"[subagents] Output: {output_file}", file=sys.stderr)
+            if queue_mode:
+                print(f"[subagents] Queue mode enabled. Send more tasks with: subagents send {session_name} <prompt>", file=sys.stderr)
             print(f"[subagents] Wait with: subagents wait {session_name}", file=sys.stderr)
         release(lock_path)
+
+
+
+# ── send ──────────────────────────────────────────────────────────────────
+
+def cmd_send(args: list[str]) -> None:
+    """Send a task to a background session's queue."""
+    prompt_file: str | None = None
+
+    # Parse flags
+    while args and args[0].startswith("--"):
+        flag = args.pop(0)
+        if flag == "--prompt-file":
+            prompt_file = args.pop(0) if args else _fail("--prompt-file requires a value")
+        else:
+            _fail(f"unknown flag {flag}")
+
+    if not args:
+        _fail("Usage: subagents send [--prompt-file <file>] <session> [prompt]")
+
+    session_name = args.pop(0)
+
+    # Determine prompt source (priority: --prompt-file > args > stdin)
+    prompt_parts = []
+
+    if prompt_file:
+        # Read from file
+        try:
+            with open(prompt_file, 'r') as f:
+                prompt_parts.append(f.read().strip())
+        except IOError as e:
+            _fail(f"Failed to read prompt file: {e}")
+
+    # Add command line args
+    if args:
+        prompt_parts.append(" ".join(args))
+
+    # Add stdin if available (non-blocking check)
+    if not sys.stdin.isatty():
+        import select
+        if select.select([sys.stdin], [], [], 0)[0]:
+            stdin_content = sys.stdin.read().strip()
+            if stdin_content:
+                prompt_parts.append(stdin_content)
+
+    if not prompt_parts:
+        _fail("No prompt provided (use --prompt-file, command args, or stdin)")
+
+    prompt = "\n".join(prompt_parts)
+
+    # Find which agent owns this session
+    from registry import find_agent_for_session, enqueue_task, get_session_data
+
+    agent_name = find_agent_for_session(session_name)
+    if not agent_name:
+        _fail(f"Session '{session_name}' not found")
+
+    # Verify it's a background session
+    session_data = get_session_data(agent_name, session_name)
+    if not session_data or session_data.get("mode") != "background":
+        _fail(f"Session '{session_name}' is not a background session. Use 'run --bg' to start background sessions.")
+
+    # Enqueue the task
+    task_id = enqueue_task(agent_name, session_name, prompt)
+    if task_id:
+        # Show task preview
+        prompt_preview = prompt[:60] + "..." if len(prompt) > 60 else prompt
+        print(f"Task queued", file=sys.stderr)
+        print(f"  Session: {session_name}", file=sys.stderr)
+        print(f"  Task ID: {task_id}", file=sys.stderr)
+        print(f"  Prompt:  {prompt_preview}", file=sys.stderr)
+
+        # Show queue status
+        queue_len = len(session_data.get("queue", [])) + 1  # +1 for the task we just added
+        current = session_data.get("current_task")
+        if current:
+            print(f"  Status:  Task is #{queue_len} in queue (worker is busy)", file=sys.stderr)
+        else:
+            print(f"  Status:  Task is #{queue_len} in queue (worker will pick up soon)", file=sys.stderr)
+    else:
+        _fail(f"Failed to enqueue task for session '{session_name}'")
+
+
+# ── cancel ────────────────────────────────────────────────────────────────
+
+def cmd_cancel(args: list[str]) -> None:
+    """Cancel queued tasks in a background session."""
+    cancel_all = False
+    task_index: int | None = None
+
+    # Parse flags
+    while args and args[0].startswith("--"):
+        flag = args.pop(0)
+        if flag == "--all":
+            cancel_all = True
+        elif flag == "--task":
+            task_str = args.pop(0) if args else _fail("--task requires a value")
+            try:
+                task_index = int(task_str) - 1  # Convert to 0-based index
+                if task_index < 0:
+                    _fail("--task index must be >= 1")
+            except ValueError:
+                _fail(f"--task must be a number, got '{task_str}'")
+        else:
+            _fail(f"unknown flag {flag}")
+
+    if not args:
+        _fail("Usage: subagents cancel [--all | --task N] <session>")
+
+    session_name = args.pop(0)
+
+    # Find which agent owns this session
+    from registry import find_agent_for_session, cancel_task, get_session_data
+
+    agent_name = find_agent_for_session(session_name)
+    if not agent_name:
+        _fail(f"Session '{session_name}' not found")
+
+    # Get queue status before cancel
+    session_data = get_session_data(agent_name, session_name)
+    if not session_data or session_data.get("mode") != "background":
+        _fail(f"Session '{session_name}' is not a background session")
+
+    queue_before = len(session_data.get("queue", []))
+
+    # Cancel tasks
+    count = cancel_task(agent_name, session_name, task_index=task_index, cancel_all=cancel_all)
+
+    # Pretty output
+    if cancel_all:
+        if count > 0:
+            print(f"Cancelled all queued tasks", file=sys.stderr)
+            print(f"  Session: {session_name}", file=sys.stderr)
+            print(f"  Removed: {count} task(s)", file=sys.stderr)
+        else:
+            print(f"No tasks to cancel", file=sys.stderr)
+            print(f"  Session: {session_name}", file=sys.stderr)
+            print(f"  Queue:   empty", file=sys.stderr)
+    elif task_index is not None:
+        if count > 0:
+            print(f"Task cancelled", file=sys.stderr)
+            print(f"  Session: {session_name}", file=sys.stderr)
+            print(f"  Task:    #{task_index + 1}", file=sys.stderr)
+            print(f"  Queue:   {queue_before - count} task(s) remaining", file=sys.stderr)
+        else:
+            print(f"Task not found", file=sys.stderr)
+            print(f"  Session: {session_name}", file=sys.stderr)
+            print(f"  Task:    #{task_index + 1}", file=sys.stderr)
+            print(f"  Queue:   only {queue_before} task(s) available", file=sys.stderr)
+    else:
+        print(f"Cancelled {count} task(s)", file=sys.stderr)
+        print(f"  Session: {session_name}", file=sys.stderr)
 
 
 # ── wait ──────────────────────────────────────────────────────────────────
@@ -473,12 +767,42 @@ def cmd_wait(args: list[str]) -> None:
             print(f"[subagents] Session {session_name} already completed.", file=sys.stderr)
             return
         _fail(f"session '{session_name}' not found (never started or already cleaned up)")
-    print(f"[subagents] Waiting for session '{session_name}'...", file=sys.stderr)
+
+    # Find agent for this session to show queue progress
+    from registry import find_agent_for_session, get_session_data
+
+    agent_name = find_agent_for_session(session_name)
+    last_status = ""
+    is_tty = sys.stderr.isatty()
+
+    print(f"Waiting for session '{session_name}'...", file=sys.stderr)
+
     while check(session_name):
-        time.sleep(0.5)
+        # Only show live progress in TTY mode
+        if is_tty and agent_name:
+            session_data = get_session_data(agent_name, session_name)
+            if session_data and session_data.get("mode") == "background":
+                current = session_data.get("current_task")
+                queue = session_data.get("queue", [])
+                completed = len(session_data.get("tasks", []))
+
+                if current:
+                    prompt = current.get('prompt', 'N/A')[:40] + "..."
+                    status = f"  > {prompt} | Queue: {len(queue)} | Done: {completed}"
+                elif queue:
+                    status = f"  {len(queue)} task{'s' if len(queue) != 1 else ''} remaining | Done: {completed}"
+                else:
+                    status = f"  Finishing up... | Done: {completed}"
+
+                if status != last_status:
+                    print(f"{status}", file=sys.stderr)
+                    last_status = status
+
+        time.sleep(1)
+
     if output_file.is_file():
         print(output_file.read_text())
-    print(f"[subagents] Session {session_name} finished.", file=sys.stderr)
+    print(f"Session '{session_name}' finished.", file=sys.stderr)
 
 
 def _wait_json(session_name: str) -> None:
@@ -607,16 +931,55 @@ def cmd_status(args: list[str]) -> None:
             print(f"Session '{session_name}' not found for agent '{agent_name}'.")
             sys.exit(1)
         status = get_session_status(agent_name, session_name)
+
+        # Simple header
         print(f"Session: {session_name}")
-        print(f"  id: {sid}")
-        print(f"  status: {status}")
+        print(f"  Agent:  {agent.name}")
+        print(f"  ID:     {sid}")
+        print(f"  Status: {status}")
+
         data = get_all_data()
         try:
-            tasks = data[agent_name]["sessions"][session_name]["tasks"]
+            session_data = data[agent_name]["sessions"][session_name]
+
+            # Show cwd if present
+            if "cwd" in session_data:
+                print(f"  CWD:    {session_data['cwd']}")
+
+            # Show current task if running
+            current_task = session_data.get("current_task")
+            if current_task:
+                prompt = current_task.get('prompt', 'N/A')
+                if len(prompt) > 70:
+                    prompt = prompt[:67] + "..."
+                print(f"\n  > Current: {prompt}")
+                if "start_time" in current_task:
+                    print(f"    Started: {current_task['start_time']}")
+
+            # Show queue if present
+            queue = session_data.get("queue", [])
+            if queue:
+                print(f"\n  Queue: {len(queue)} task{'s' if len(queue) != 1 else ''}")
+                for i, task in enumerate(queue[:5], 1):  # Show first 5
+                    prompt = task.get("prompt", "N/A")
+                    if len(prompt) > 65:
+                        prompt = prompt[:62] + "..."
+                    print(f"     {i}. {prompt}")
+                if len(queue) > 5:
+                    print(f"     ... and {len(queue) - 5} more")
+
+            # Show completed tasks history
+            tasks = session_data.get("tasks", [])
             if tasks:
-                print("  tasks:")
-                for t in tasks:
-                    print(f"    - [{t['status']}] {t['prompt']} ({t['time']})")
+                print(f"\n  Completed: {len(tasks)} task{'s' if len(tasks) != 1 else ''}")
+                for t in tasks[-3:]:  # Show last 3
+                    prompt = t['prompt']
+                    if len(prompt) > 60:
+                        prompt = prompt[:57] + "..."
+                    status_icon = "+" if t['status'] == 'done' else "x"
+                    print(f"     {status_icon} {prompt}")
+                if len(tasks) > 3:
+                    print(f"     ... and {len(tasks) - 3} more")
         except KeyError:
             pass
     else:
@@ -647,14 +1010,25 @@ def _status_json(args: list[str]) -> None:
             emitter.agent_error(session_name, f"session '{session_name}' not found for agent '{agent_name}'")
             sys.exit(1)
         status = get_session_status(agent_name, session_name)
-        tasks: list[dict] | None = None
         data = get_all_data()
+
+        # Build status response with extended fields
+        status_data: dict = {"status": status}
         try:
-            tasks = data[agent_name]["sessions"][session_name]["tasks"]
+            session_data = data[agent_name]["sessions"][session_name]
+            if "cwd" in session_data:
+                status_data["cwd"] = session_data["cwd"]
+            if "current_task" in session_data:
+                status_data["current_task"] = session_data["current_task"]
+            if "queue" in session_data:
+                status_data["queue"] = session_data["queue"]
+            if "tasks" in session_data:
+                status_data["tasks"] = session_data["tasks"]
         except KeyError:
             pass
+
         emitter = JsonlEmitter()
-        emitter.agent_status(agent_name, session_name, status, tasks=tasks)
+        emitter.emit(type="agent_status", agent=agent_name, session=session_name, **status_data)
     else:
         sessions = list_sessions(agent_name)
         if not sessions:
@@ -683,6 +1057,10 @@ def main() -> None:
         sys.exit(0)
     elif cmd == "run":
         cmd_run(args)
+    elif cmd == "send":
+        cmd_send(args)
+    elif cmd == "cancel":
+        cmd_cancel(args)
     elif cmd == "wait":
         cmd_wait(args)
     elif cmd == "list":
@@ -698,8 +1076,10 @@ def _print_help() -> None:
     print("Usage: subagents <command> [args...]", file=sys.stderr)
     print(file=sys.stderr)
     print("Commands:", file=sys.stderr)
-    print("  run [--bg] [--backend <name>] [--transport cli|acp] [--system-mode append|overwrite] [--output json] <agent> <session> <prompt>", file=sys.stderr)
-    print("  run [--bg] [--output json] <session> <prompt>", file=sys.stderr)
+    print("  run [--bg] [--cwd <path>] [--backend <name>] [--transport cli|acp] [--system-mode append|overwrite] [--output json] <agent> <session> <prompt>", file=sys.stderr)
+    print("  run [--bg] [--cwd <path>] [--output json] <session> <prompt>", file=sys.stderr)
+    print("  send [--prompt-file <file>] <session> [prompt]    # Add task to background session queue", file=sys.stderr)
+    print("  cancel [--all | --task N] <session>                # Cancel queued tasks", file=sys.stderr)
     print("  wait [--output json] <session>", file=sys.stderr)
     print("  list [--output json]", file=sys.stderr)
     print("  status [--output json] <agent> [session]", file=sys.stderr)

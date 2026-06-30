@@ -51,21 +51,65 @@ You are a code reviewer. Analyze code for correctness, security, and best practi
 scripts/subagents run <agent> <session> <prompt>
 scripts/subagents run <session> <prompt>                      # resume only, no agent
 
+# Working directory isolation
+scripts/subagents run --cwd <path> <agent> <session> <prompt> # run in specified directory
+scripts/subagents run --bg --cwd /tmp/sandbox reviewer s1 "task"  # background + custom cwd
+
 # System prompt mode (default: append)
 scripts/subagents run --system-mode overwrite <agent> <session> <prompt>
 scripts/subagents run --system-mode append <agent> <session> <prompt>
 
-# Background execution (returns immediately, output to .agents/subagent/outputs/)
-scripts/subagents run --bg <agent> <session> <prompt>
-scripts/subagents wait <session>                               # block until done
+# Background execution with task queue (returns immediately)
+scripts/subagents run --bg <agent> <session> <prompt>         # starts background worker
+scripts/subagents send <session> "additional task"            # queue more tasks
+scripts/subagents send <session> --prompt-file task.txt       # from file
+echo "task 3" | scripts/subagents send <session>              # from stdin
+
+# Queue management
+scripts/subagents cancel <session> --task 2                   # cancel specific task
+scripts/subagents cancel <session> --all                      # cancel all queued tasks
 
 # Monitor
+scripts/subagents wait <session>                              # block until all tasks done
 scripts/subagents list                                         # all agents and sessions
 scripts/subagents status <agent>                               # one agent's sessions
-scripts/subagents status <agent> <session>                     # session details + task history
+scripts/subagents status <agent> <session>                     # shows cwd, queue, tasks
 ```
 
 First run creates the session; subsequent runs with the same session name resume it, preserving all prior context.
+
+### Task Queue (Background Mode)
+
+Background sessions (`--bg`) support task queuing:
+1. **Initial task**: Executed immediately when session starts
+2. **Queue tasks**: Use `send` to add tasks while session is running
+3. **Sequential execution**: Tasks execute one after another in order
+4. **Persistent context**: All tasks share the same session context
+5. **Working directory**: All tasks in the queue execute in the session's `--cwd` (if specified)
+
+Example workflow:
+```bash
+# Start background session in a worktree
+git worktree add .claude/worktrees/refactor -b refactor
+scripts/subagents run --bg --cwd .claude/worktrees/refactor reviewer s1 "analyze code"
+
+# Queue additional tasks
+scripts/subagents send s1 "refactor based on analysis"
+scripts/subagents send s1 "update tests"
+scripts/subagents send s1 "verify all pass"
+
+# Monitor progress
+scripts/subagents status reviewer s1
+
+# Wait for completion
+scripts/subagents wait s1
+
+# Review and merge
+cd .claude/worktrees/refactor
+git diff
+cd ~/project
+git merge refactor
+```
 
 ## Backends
 

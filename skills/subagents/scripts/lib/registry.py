@@ -32,16 +32,36 @@ def _write(data: dict) -> None:
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-def register(agent: str, session: str, session_id: str) -> None:
-    """Register a new session for an agent."""
+def register(agent: str, session: str, session_id: str, cwd: str | None = None, background: bool = False) -> None:
+    """Register a new session for an agent.
+
+    Args:
+        agent: Agent name
+        session: Session name
+        session_id: Unique session identifier
+        cwd: Working directory (absolute path), None means current directory
+        background: Whether this is a background session with queue support
+    """
     now = datetime.now(timezone.utc).isoformat()
     data = _read()
-    data.setdefault(agent, {}).setdefault("sessions", {})[session] = {
+    session_data = {
         "session_id": session_id,
         "status": "running",
         "created": now,
         "tasks": [],
     }
+
+    # Add cwd if specified
+    if cwd:
+        session_data["cwd"] = cwd
+
+    # Add queue support for background sessions
+    if background:
+        session_data["mode"] = "background"
+        session_data["queue"] = []
+        session_data["current_task"] = None
+
+    data.setdefault(agent, {}).setdefault("sessions", {})[session] = session_data
     _write(data)
 
 
@@ -133,3 +153,102 @@ def list_sessions(agent: str) -> list[str]:
 def get_all_data() -> dict:
     """Return the full registry data."""
     return _read()
+
+
+def enqueue_task(agent: str, session: str, prompt: str) -> str | None:
+    """Add a task to the session's queue.
+
+    Returns:
+        Task ID if successful, None if session not found or not a background session.
+    """
+    import uuid
+    data = _read()
+    try:
+        session_data = data[agent]["sessions"][session]
+        if session_data.get("mode") != "background":
+            return None
+
+        task_id = f"task-{uuid.uuid4().hex[:8]}"
+        task = {
+            "id": task_id,
+            "prompt": prompt,
+            "status": "queued",
+            "queued_at": datetime.now(timezone.utc).isoformat(),
+        }
+        session_data.setdefault("queue", []).append(task)
+        _write(data)
+        return task_id
+    except KeyError:
+        return None
+
+
+def dequeue_task(agent: str, session: str) -> dict | None:
+    """Remove and return the next task from the queue.
+
+    Returns:
+        Task dict if queue not empty, None otherwise.
+    """
+    data = _read()
+    try:
+        session_data = data[agent]["sessions"][session]
+        queue = session_data.get("queue", [])
+        if not queue:
+            return None
+
+        task = queue.pop(0)
+        _write(data)
+        return task
+    except KeyError:
+        return None
+
+
+def set_current_task(agent: str, session: str, task: dict | None) -> None:
+    """Set the currently running task."""
+    data = _read()
+    try:
+        data[agent]["sessions"][session]["current_task"] = task
+        _write(data)
+    except KeyError:
+        pass
+
+
+def cancel_task(agent: str, session: str, task_index: int | None = None, cancel_all: bool = False) -> int:
+    """Cancel task(s) in the queue.
+
+    Args:
+        agent: Agent name
+        session: Session name
+        task_index: Index of task to cancel (0-based), None to cancel current
+        cancel_all: Cancel all queued tasks
+
+    Returns:
+        Number of tasks cancelled
+    """
+    data = _read()
+    try:
+        session_data = data[agent]["sessions"][session]
+        queue = session_data.get("queue", [])
+
+        if cancel_all:
+            count = len(queue)
+            session_data["queue"] = []
+            _write(data)
+            return count
+        elif task_index is not None:
+            if 0 <= task_index < len(queue):
+                queue.pop(task_index)
+                _write(data)
+                return 1
+
+        return 0
+    except KeyError:
+        return 0
+
+
+def get_session_data(agent: str, session: str) -> dict | None:
+    """Get full session data including cwd, queue, current_task."""
+    data = _read()
+    try:
+        return data[agent]["sessions"][session]
+    except KeyError:
+        return None
