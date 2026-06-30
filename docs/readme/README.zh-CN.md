@@ -71,6 +71,10 @@
 
 将任意 CLI Agent 封装为可复用的子代理。自动检测后端，也可通过 `--backend` 手动指定。可扩展 —— 几行代码即可添加新后端。
 
+<p align="center">
+  <img src="../subagents.svg" alt="Subagents 演示：任务队列、cwd 隔离、send/cancel/status" width="100%" />
+</p>
+
 </td>
 </tr>
 <tr>
@@ -186,10 +190,6 @@ scripts/subagents wait r1 && scripts/subagents wait r2 && scripts/subagents wait
 scripts/subagents list
 ```
 
-<p align="center">
-  <img src="../subagents.svg" alt="Subagents 演示：任务队列、cwd 隔离、send/cancel/status" width="100%" />
-</p>
-
 ## 演示录制
 
 使用 [console2svg](https://github.com/vlln/console2svg) 录制动态终端演示：
@@ -201,12 +201,12 @@ npm install -g console2svg
 # 录制 subagents 演示（队列、cwd、send、cancel、status）
 console2svg "bash demos/subagents-demo.sh" \
     -o docs/subagents.svg -w 100 -h 40 \
-    -d macos --theme dark -v --fps 12 --no-loop --timeout 25
+    -d macos --theme dark -v --fps 12 --timeout 25
 
 # 录制 workflow 演示（TTY 树、阶段、spinner、实时更新）
 console2svg "bash demos/workflow-demo.sh" \
     -o docs/workflow.svg -w 100 -h 36 \
-    -d macos --theme dark -v --fps 12 --no-loop --timeout 15
+    -d macos --theme dark -v --fps 12 --timeout 15
 ```
 
 ## 开发

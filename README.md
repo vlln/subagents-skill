@@ -71,6 +71,10 @@ Pipeline, parallel, and nested workflows with `workflow.py`. Chain agents, split
 
 Wrap any CLI agent as a reusable subagent. Auto-detection picks the right backend; override with `--backend`. Extensible — add new backends in a few lines.
 
+<p align="center">
+  <img src="docs/subagents.svg" alt="Subagents demo: task queue, cwd isolation, send/cancel/status" width="100%" />
+</p>
+
 </td>
 </tr>
 <tr>
@@ -186,10 +190,6 @@ scripts/subagents wait r1 && scripts/subagents wait r2 && scripts/subagents wait
 scripts/subagents list
 ```
 
-<p align="center">
-  <img src="docs/subagents.svg" alt="Subagents demo: task queue, cwd isolation, send/cancel/status" width="100%" />
-</p>
-
 ## Demo
 
 Record animated terminal demos with [console2svg](https://github.com/arika0093/console2svg):
@@ -201,12 +201,12 @@ npm install -g console2svg
 # Record subagents demo (queue, cwd, send, cancel, status)
 console2svg "bash demos/subagents-demo.sh" \
     -o docs/subagents.svg -w 100 -h 40 \
-    -d macos --theme dark -v --fps 12 --no-loop --timeout 25
+    -d macos --theme dark -v --fps 12 --timeout 25
 
 # Record workflow demo (TTY tree, phases, spinners, live updates)
 console2svg "bash demos/workflow-demo.sh" \
     -o docs/workflow.svg -w 100 -h 36 \
-    -d macos --theme dark -v --fps 12 --no-loop --timeout 15
+    -d macos --theme dark -v --fps 12 --timeout 15
 ```
 
 ## Development

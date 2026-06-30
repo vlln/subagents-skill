@@ -25,43 +25,43 @@ text {
     opacity: 0;
   }
 }
-.frame-0 { animation:k0 9.75s linear forwards; }
+.frame-0 { animation:k0 9.75s linear infinite; }
 @keyframes k1 {
   0%, 11.965% {
     opacity: 0;
   }
-  11.966%, 19.658% {
-    opacity: 1;
-  }
-  19.659%, 100% {
-    opacity: 0;
-  }
-}
-.frame-1 { animation:k1 9.75s linear forwards; }
-@keyframes k2 {
-  0%, 19.657% {
-    opacity: 0;
-  }
-  19.658%, 27.35% {
+  11.966%, 27.35% {
     opacity: 1;
   }
   27.351%, 100% {
     opacity: 0;
   }
 }
-.frame-2 { animation:k2 9.75s linear forwards; }
-@keyframes k3 {
+.frame-1 { animation:k1 9.75s linear infinite; }
+@keyframes k2 {
   0%, 27.349% {
     opacity: 0;
   }
-  27.35%, 38.462% {
+  27.35%, 28.205% {
+    opacity: 1;
+  }
+  28.206%, 100% {
+    opacity: 0;
+  }
+}
+.frame-2 { animation:k2 9.75s linear infinite; }
+@keyframes k3 {
+  0%, 28.204% {
+    opacity: 0;
+  }
+  28.205%, 38.462% {
     opacity: 1;
   }
   38.463%, 100% {
     opacity: 0;
   }
 }
-.frame-3 { animation:k3 9.75s linear forwards; }
+.frame-3 { animation:k3 9.75s linear infinite; }
 @keyframes k4 {
   0%, 38.461% {
     opacity: 0;
@@ -73,56 +73,68 @@ text {
     opacity: 0;
   }
 }
-.frame-4 { animation:k4 9.75s linear forwards; }
+.frame-4 { animation:k4 9.75s linear infinite; }
 @keyframes k5 {
   0%, 39.315% {
     opacity: 0;
   }
-  39.316%, 47.009% {
-    opacity: 1;
-  }
-  47.01%, 100% {
-    opacity: 0;
-  }
-}
-.frame-5 { animation:k5 9.75s linear forwards; }
-@keyframes k6 {
-  0%, 47.008% {
-    opacity: 0;
-  }
-  47.009%, 54.701% {
+  39.316%, 54.701% {
     opacity: 1;
   }
   54.702%, 100% {
     opacity: 0;
   }
 }
-.frame-6 { animation:k6 9.75s linear forwards; }
-@keyframes k7 {
+.frame-5 { animation:k5 9.75s linear infinite; }
+@keyframes k6 {
   0%, 54.7% {
     opacity: 0;
   }
-  54.701%, 70.94% {
+  54.701%, 55.556% {
+    opacity: 1;
+  }
+  55.557%, 100% {
+    opacity: 0;
+  }
+}
+.frame-6 { animation:k6 9.75s linear infinite; }
+@keyframes k7 {
+  0%, 55.555% {
+    opacity: 0;
+  }
+  55.556%, 70.94% {
     opacity: 1;
   }
   70.941%, 100% {
     opacity: 0;
   }
 }
-.frame-7 { animation:k7 9.75s linear forwards; }
+.frame-7 { animation:k7 9.75s linear infinite; }
 @keyframes k8 {
   0%, 70.939% {
     opacity: 0;
   }
-  70.94%, 71.795% {
+  70.94%, 71.368% {
+    opacity: 1;
+  }
+  71.369%, 100% {
+    opacity: 0;
+  }
+}
+.frame-8 { animation:k8 9.75s linear infinite; }
+@keyframes k9 {
+  0%, 71.367% {
+    opacity: 0;
+  }
+  71.368%, 71.795% {
     opacity: 1;
   }
   71.796%, 100% {
     opacity: 0;
   }
 }
-.frame-8 { animation:k8 9.75s linear forwards; }
-@keyframes k9 {
+.frame-9 { animation:k9 9.75s linear infinite; }
+@keyframes k10 {
   0%, 71.794% {
     opacity: 0;
   }
@@ -133,8 +145,8 @@ text {
     opacity: 0;
   }
 }
-.frame-9 { animation:k9 9.75s linear forwards; }
-@keyframes k10 {
+.frame-10 { animation:k10 9.75s linear infinite; }
+@keyframes k11 {
   0%, 82.05% {
     opacity: 0;
   }
@@ -145,8 +157,8 @@ text {
     opacity: 0;
   }
 }
-.frame-10 { animation:k10 9.75s linear forwards; }
-@keyframes k11 {
+.frame-11 { animation:k11 9.75s linear infinite; }
+@keyframes k12 {
   0%, 82.905% {
     opacity: 0;
   }
@@ -157,8 +169,8 @@ text {
     opacity: 0;
   }
 }
-.frame-11 { animation:k11 9.75s linear forwards; }
-@keyframes k12 {
+.frame-12 { animation:k12 9.75s linear infinite; }
+@keyframes k13 {
   0%, 98.29% {
     opacity: 0;
   }
@@ -169,8 +181,8 @@ text {
     opacity: 0;
   }
 }
-.frame-12 { animation:k12 9.75s linear forwards; }
-@keyframes k13 {
+.frame-13 { animation:k13 9.75s linear infinite; }
+@keyframes k14 {
   0%, 99.144% {
     opacity: 0;
   }
@@ -181,7 +193,7 @@ text {
     opacity: 1;
   }
 }
-.frame-13 { animation:k13 9.75s linear forwards; }
+.frame-14 { animation:k14 9.75s linear infinite; }
 </style>
 <rect x="0.5" y="0.5" rx="10" ry="10" width="857" height="764" fill="#1f1f1f" stroke="#3a3a3a"/>
 <rect x="1" y="1" rx="9" ry="9" width="856" height="27" fill="#2c2c2c"/>
@@ -361,7 +373,7 @@ text {
 <text class="crt" x="92.4" y="428" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
 <text class="crt" x="16.8" y="446" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
 <text class="crt" x="58.8" y="446" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">ID:</text>
-<text class="crt" x="92.4" y="446" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-909d9940</text>
+<text class="crt" x="92.4" y="446" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-ccbcecea</text>
 <text class="crt" x="16.8" y="464" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Prompt:</text>
 <text class="crt" x="92.4" y="464" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">Fix</text>
 <text class="crt" x="126" y="464" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">auth</text>
@@ -436,7 +448,7 @@ text {
 <text class="crt" x="92.4" y="428" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
 <text class="crt" x="16.8" y="446" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
 <text class="crt" x="58.8" y="446" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">ID:</text>
-<text class="crt" x="92.4" y="446" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-909d9940</text>
+<text class="crt" x="92.4" y="446" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-ccbcecea</text>
 <text class="crt" x="16.8" y="464" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Prompt:</text>
 <text class="crt" x="92.4" y="464" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">Fix</text>
 <text class="crt" x="126" y="464" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">auth</text>
@@ -518,7 +530,7 @@ text {
 <text class="crt" x="92.4" y="428" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
 <text class="crt" x="16.8" y="446" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
 <text class="crt" x="58.8" y="446" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">ID:</text>
-<text class="crt" x="92.4" y="446" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-909d9940</text>
+<text class="crt" x="92.4" y="446" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-ccbcecea</text>
 <text class="crt" x="16.8" y="464" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Prompt:</text>
 <text class="crt" x="92.4" y="464" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">Fix</text>
 <text class="crt" x="126" y="464" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">auth</text>
@@ -545,7 +557,7 @@ text {
 <text class="crt" x="92.4" y="554" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
 <text class="crt" x="16.8" y="572" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
 <text class="crt" x="58.8" y="572" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">ID:</text>
-<text class="crt" x="92.4" y="572" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-178dfacf</text>
+<text class="crt" x="92.4" y="572" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-1a286f7d</text>
 <text class="crt" x="16.8" y="590" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Prompt:</text>
 <text class="crt" x="92.4" y="590" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">Write</text>
 <text class="crt" x="142.8" y="590" fill="#d4d4d4" textLength="92.4" lengthAdjust="spacing">integration</text>
@@ -620,7 +632,7 @@ text {
 <text class="crt" x="92.4" y="428" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
 <text class="crt" x="16.8" y="446" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
 <text class="crt" x="58.8" y="446" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">ID:</text>
-<text class="crt" x="92.4" y="446" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-909d9940</text>
+<text class="crt" x="92.4" y="446" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-ccbcecea</text>
 <text class="crt" x="16.8" y="464" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Prompt:</text>
 <text class="crt" x="92.4" y="464" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">Fix</text>
 <text class="crt" x="126" y="464" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">auth</text>
@@ -647,7 +659,7 @@ text {
 <text class="crt" x="92.4" y="554" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
 <text class="crt" x="16.8" y="572" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
 <text class="crt" x="58.8" y="572" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">ID:</text>
-<text class="crt" x="92.4" y="572" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-178dfacf</text>
+<text class="crt" x="92.4" y="572" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-1a286f7d</text>
 <text class="crt" x="16.8" y="590" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Prompt:</text>
 <text class="crt" x="92.4" y="590" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">Write</text>
 <text class="crt" x="142.8" y="590" fill="#d4d4d4" textLength="92.4" lengthAdjust="spacing">integration</text>
@@ -691,7 +703,7 @@ text {
 <text class="crt" x="92.4" y="122" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
 <text class="crt" x="16.8" y="140" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
 <text class="crt" x="58.8" y="140" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">ID:</text>
-<text class="crt" x="92.4" y="140" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-909d9940</text>
+<text class="crt" x="92.4" y="140" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-ccbcecea</text>
 <text class="crt" x="16.8" y="158" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Prompt:</text>
 <text class="crt" x="92.4" y="158" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">Fix</text>
 <text class="crt" x="126" y="158" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">auth</text>
@@ -718,7 +730,7 @@ text {
 <text class="crt" x="92.4" y="248" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
 <text class="crt" x="16.8" y="266" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
 <text class="crt" x="58.8" y="266" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">ID:</text>
-<text class="crt" x="92.4" y="266" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-178dfacf</text>
+<text class="crt" x="92.4" y="266" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-1a286f7d</text>
 <text class="crt" x="16.8" y="284" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Prompt:</text>
 <text class="crt" x="92.4" y="284" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">Write</text>
 <text class="crt" x="142.8" y="284" fill="#d4d4d4" textLength="92.4" lengthAdjust="spacing">integration</text>
@@ -804,7 +816,7 @@ text {
 <text class="crt" x="92.4" y="86" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
 <text class="crt" x="16.8" y="104" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
 <text class="crt" x="58.8" y="104" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">ID:</text>
-<text class="crt" x="92.4" y="104" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-909d9940</text>
+<text class="crt" x="92.4" y="104" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-ccbcecea</text>
 <text class="crt" x="16.8" y="122" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Prompt:</text>
 <text class="crt" x="92.4" y="122" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">Fix</text>
 <text class="crt" x="126" y="122" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">auth</text>
@@ -831,7 +843,7 @@ text {
 <text class="crt" x="92.4" y="212" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
 <text class="crt" x="16.8" y="230" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
 <text class="crt" x="58.8" y="230" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">ID:</text>
-<text class="crt" x="92.4" y="230" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-178dfacf</text>
+<text class="crt" x="92.4" y="230" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-1a286f7d</text>
 <text class="crt" x="16.8" y="248" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Prompt:</text>
 <text class="crt" x="92.4" y="248" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">Write</text>
 <text class="crt" x="142.8" y="248" fill="#d4d4d4" textLength="92.4" lengthAdjust="spacing">integration</text>
@@ -907,13 +919,132 @@ text {
 </g>
 <g id="fd-9" transform="translate(9 36)">
 <rect width="840" height="720" fill="#1e1e1e"/>
+<text class="crt" x="0" y="14" fill="#10E291" textLength="8.4" lengthAdjust="spacing" style="font-weight:bold;">$</text>
+<text class="crt" x="16.8" y="14" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">subagents</text>
+<text class="crt" x="100.8" y="14" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">send</text>
+<text class="crt" x="142.8" y="14" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
+<text class="crt" x="168" y="14" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">&quot;Fix</text>
+<text class="crt" x="210" y="14" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">auth</text>
+<text class="crt" x="252" y="14" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">service&quot;</text>
+<text class="crt" x="319.2" y="50" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
+<text class="crt" x="361.2" y="50" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">queued</text>
+<text class="crt" x="16.8" y="68" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">Session:</text>
+<text class="crt" x="92.4" y="68" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
+<text class="crt" x="16.8" y="86" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
+<text class="crt" x="58.8" y="86" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">ID:</text>
+<text class="crt" x="92.4" y="86" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-ccbcecea</text>
+<text class="crt" x="16.8" y="104" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Prompt:</text>
+<text class="crt" x="92.4" y="104" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">Fix</text>
+<text class="crt" x="126" y="104" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">auth</text>
+<text class="crt" x="168" y="104" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">service</text>
+<text class="crt" x="16.8" y="122" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Status:</text>
+<text class="crt" x="92.4" y="122" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
+<text class="crt" x="134.4" y="122" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">is</text>
+<text class="crt" x="159.6" y="122" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">#3</text>
+<text class="crt" x="184.8" y="122" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">in</text>
+<text class="crt" x="210" y="122" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">queue</text>
+<text class="crt" x="260.4" y="122" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">(worker</text>
+<text class="crt" x="327.6" y="122" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">is</text>
+<text class="crt" x="352.8" y="122" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">busy)</text>
+<text class="crt" x="0" y="140" fill="#10E291" textLength="8.4" lengthAdjust="spacing" style="font-weight:bold;">$</text>
+<text class="crt" x="16.8" y="140" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">subagents</text>
+<text class="crt" x="100.8" y="140" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">send</text>
+<text class="crt" x="142.8" y="140" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
+<text class="crt" x="168" y="140" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">&quot;Write</text>
+<text class="crt" x="226.8" y="140" fill="#d4d4d4" textLength="92.4" lengthAdjust="spacing">integration</text>
+<text class="crt" x="327.6" y="140" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">tests&quot;</text>
+<text class="crt" x="378" y="176" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
+<text class="crt" x="420" y="176" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">queued</text>
+<text class="crt" x="16.8" y="194" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">Session:</text>
+<text class="crt" x="92.4" y="194" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
+<text class="crt" x="16.8" y="212" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
+<text class="crt" x="58.8" y="212" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">ID:</text>
+<text class="crt" x="92.4" y="212" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-1a286f7d</text>
+<text class="crt" x="16.8" y="230" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Prompt:</text>
+<text class="crt" x="92.4" y="230" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">Write</text>
+<text class="crt" x="142.8" y="230" fill="#d4d4d4" textLength="92.4" lengthAdjust="spacing">integration</text>
+<text class="crt" x="243.6" y="230" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">tests</text>
+<text class="crt" x="16.8" y="248" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Status:</text>
+<text class="crt" x="92.4" y="248" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
+<text class="crt" x="134.4" y="248" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">is</text>
+<text class="crt" x="159.6" y="248" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">#4</text>
+<text class="crt" x="184.8" y="248" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">in</text>
+<text class="crt" x="210" y="248" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">queue</text>
+<text class="crt" x="260.4" y="248" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">(worker</text>
+<text class="crt" x="327.6" y="248" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">is</text>
+<text class="crt" x="352.8" y="248" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">busy)</text>
+<text class="crt" x="0" y="266" fill="#10E291" textLength="8.4" lengthAdjust="spacing" style="font-weight:bold;">$</text>
+<text class="crt" x="16.8" y="266" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">subagents</text>
+<text class="crt" x="100.8" y="266" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">status</text>
+<text class="crt" x="159.6" y="266" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">reviewer</text>
+<text class="crt" x="235.2" y="266" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
+<text class="crt" x="252" y="302" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">Agent:</text>
+<text class="crt" x="310.8" y="302" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">reviewer</text>
+<text class="crt" x="16.8" y="320" fill="#d4d4d4" textLength="100.8" lengthAdjust="spacing">description:</text>
+<text class="crt" x="126" y="320" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">Expert</text>
+<text class="crt" x="184.8" y="320" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">code</text>
+<text class="crt" x="226.8" y="320" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">reviewer</text>
+<text class="crt" x="0" y="356" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">Session:</text>
+<text class="crt" x="75.6" y="356" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
+<text class="crt" x="16.8" y="374" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">Agent:</text>
+<text class="crt" x="84" y="374" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">reviewer</text>
+<text class="crt" x="16.8" y="392" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">ID:</text>
+<text class="crt" x="84" y="392" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">sid-demo</text>
+<text class="crt" x="16.8" y="410" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Status:</text>
+<text class="crt" x="84" y="410" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">crashed</text>
+<text class="crt" x="16.8" y="428" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">CWD:</text>
+<text class="crt" x="84" y="428" fill="#d4d4d4" textLength="260.4" lengthAdjust="spacing">/tmp/.claude/worktrees/refactor</text>
+<text class="crt" x="16.8" y="464" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">&gt;</text>
+<text class="crt" x="33.6" y="464" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">Current:</text>
+<text class="crt" x="109.2" y="464" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Analyze</text>
+<text class="crt" x="176.4" y="464" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">codebase</text>
+<text class="crt" x="16.8" y="500" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">Queue:</text>
+<text class="crt" x="75.6" y="500" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">4</text>
+<text class="crt" x="92.4" y="500" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">tasks</text>
+<text class="crt" x="42" y="518" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">1.</text>
+<text class="crt" x="67.2" y="518" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">Refactor</text>
+<text class="crt" x="142.8" y="518" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">auth</text>
+<text class="crt" x="184.8" y="518" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">module</text>
+<text class="crt" x="42" y="536" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">2.</text>
+<text class="crt" x="67.2" y="536" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">Update</text>
+<text class="crt" x="126" y="536" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">unit</text>
+<text class="crt" x="168" y="536" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">tests</text>
+<text class="crt" x="42" y="554" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">3.</text>
+<text class="crt" x="67.2" y="554" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">Fix</text>
+<text class="crt" x="100.8" y="554" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">auth</text>
+<text class="crt" x="142.8" y="554" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">service</text>
+<text class="crt" x="42" y="572" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">4.</text>
+<text class="crt" x="67.2" y="572" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">Write</text>
+<text class="crt" x="117.6" y="572" fill="#d4d4d4" textLength="92.4" lengthAdjust="spacing">integration</text>
+<text class="crt" x="218.4" y="572" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">tests</text>
+<text class="crt" x="16.8" y="608" fill="#d4d4d4" textLength="84" lengthAdjust="spacing">Completed:</text>
+<text class="crt" x="109.2" y="608" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">2</text>
+<text class="crt" x="126" y="608" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">tasks</text>
+<text class="crt" x="42" y="626" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">+</text>
+<text class="crt" x="58.8" y="626" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">Setup</text>
+<text class="crt" x="109.2" y="626" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">project</text>
+<text class="crt" x="42" y="644" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">+</text>
+<text class="crt" x="58.8" y="644" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">Configure</text>
+<text class="crt" x="142.8" y="644" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">linting</text>
+<text class="crt" x="0" y="662" fill="#10E291" textLength="8.4" lengthAdjust="spacing" style="font-weight:bold;">$</text>
+<text class="crt" x="16.8" y="662" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">subagents</text>
+<text class="crt" x="100.8" y="662" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">cancel</text>
+<text class="crt" x="159.6" y="662" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
+<text class="crt" x="184.8" y="662" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">--task</text>
+<text class="crt" x="243.6" y="662" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">2</text>
+<text class="crt" x="252" y="698" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">Cancelled</text>
+<text class="crt" x="336" y="698" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">0</text>
+<text class="crt" x="352.8" y="698" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">task(s)</text>
+</g>
+<g id="fd-10" transform="translate(9 36)">
+<rect width="840" height="720" fill="#1e1e1e"/>
 <text class="crt" x="319.2" y="32" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
 <text class="crt" x="361.2" y="32" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">queued</text>
 <text class="crt" x="16.8" y="50" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">Session:</text>
 <text class="crt" x="92.4" y="50" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
 <text class="crt" x="16.8" y="68" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
 <text class="crt" x="58.8" y="68" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">ID:</text>
-<text class="crt" x="92.4" y="68" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-909d9940</text>
+<text class="crt" x="92.4" y="68" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-ccbcecea</text>
 <text class="crt" x="16.8" y="86" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Prompt:</text>
 <text class="crt" x="92.4" y="86" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">Fix</text>
 <text class="crt" x="126" y="86" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">auth</text>
@@ -940,7 +1071,7 @@ text {
 <text class="crt" x="92.4" y="176" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
 <text class="crt" x="16.8" y="194" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
 <text class="crt" x="58.8" y="194" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">ID:</text>
-<text class="crt" x="92.4" y="194" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-178dfacf</text>
+<text class="crt" x="92.4" y="194" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-1a286f7d</text>
 <text class="crt" x="16.8" y="212" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Prompt:</text>
 <text class="crt" x="92.4" y="212" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">Write</text>
 <text class="crt" x="142.8" y="212" fill="#d4d4d4" textLength="92.4" lengthAdjust="spacing">integration</text>
@@ -1019,13 +1150,13 @@ text {
 <text class="crt" x="16.8" y="698" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">Session:</text>
 <text class="crt" x="92.4" y="698" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
 </g>
-<g id="fd-10" transform="translate(9 36)">
+<g id="fd-11" transform="translate(9 36)">
 <rect width="840" height="720" fill="#1e1e1e"/>
 <text class="crt" x="16.8" y="14" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">Session:</text>
 <text class="crt" x="92.4" y="14" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
 <text class="crt" x="16.8" y="32" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
 <text class="crt" x="58.8" y="32" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">ID:</text>
-<text class="crt" x="92.4" y="32" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-909d9940</text>
+<text class="crt" x="92.4" y="32" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-ccbcecea</text>
 <text class="crt" x="16.8" y="50" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Prompt:</text>
 <text class="crt" x="92.4" y="50" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">Fix</text>
 <text class="crt" x="126" y="50" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">auth</text>
@@ -1052,7 +1183,7 @@ text {
 <text class="crt" x="92.4" y="140" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
 <text class="crt" x="16.8" y="158" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
 <text class="crt" x="58.8" y="158" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">ID:</text>
-<text class="crt" x="92.4" y="158" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-178dfacf</text>
+<text class="crt" x="92.4" y="158" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-1a286f7d</text>
 <text class="crt" x="16.8" y="176" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Prompt:</text>
 <text class="crt" x="92.4" y="176" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">Write</text>
 <text class="crt" x="142.8" y="176" fill="#d4d4d4" textLength="92.4" lengthAdjust="spacing">integration</text>
@@ -1136,7 +1267,7 @@ text {
 <text class="crt" x="159.6" y="680" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
 <text class="crt" x="184.8" y="680" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">--all</text>
 </g>
-<g id="fd-11" transform="translate(9 36)">
+<g id="fd-12" transform="translate(9 36)">
 <rect width="840" height="720" fill="#1e1e1e"/>
 <text class="crt" x="16.8" y="14" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Prompt:</text>
 <text class="crt" x="92.4" y="14" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">Fix</text>
@@ -1164,7 +1295,7 @@ text {
 <text class="crt" x="92.4" y="104" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
 <text class="crt" x="16.8" y="122" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
 <text class="crt" x="58.8" y="122" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">ID:</text>
-<text class="crt" x="92.4" y="122" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-178dfacf</text>
+<text class="crt" x="92.4" y="122" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-1a286f7d</text>
 <text class="crt" x="16.8" y="140" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Prompt:</text>
 <text class="crt" x="92.4" y="140" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">Write</text>
 <text class="crt" x="142.8" y="140" fill="#d4d4d4" textLength="92.4" lengthAdjust="spacing">integration</text>
@@ -1253,7 +1384,7 @@ text {
 <text class="crt" x="16.8" y="698" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">Session:</text>
 <text class="crt" x="92.4" y="698" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
 </g>
-<g id="fd-12" transform="translate(9 36)">
+<g id="fd-13" transform="translate(9 36)">
 <rect width="840" height="720" fill="#1e1e1e"/>
 <text class="crt" x="0" y="14" fill="#10E291" textLength="8.4" lengthAdjust="spacing" style="font-weight:bold;">$</text>
 <text class="crt" x="16.8" y="14" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">subagents</text>
@@ -1268,7 +1399,7 @@ text {
 <text class="crt" x="92.4" y="68" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
 <text class="crt" x="16.8" y="86" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Task</text>
 <text class="crt" x="58.8" y="86" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">ID:</text>
-<text class="crt" x="92.4" y="86" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-178dfacf</text>
+<text class="crt" x="92.4" y="86" fill="#d4d4d4" textLength="109.2" lengthAdjust="spacing">task-1a286f7d</text>
 <text class="crt" x="16.8" y="104" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Prompt:</text>
 <text class="crt" x="92.4" y="104" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">Write</text>
 <text class="crt" x="142.8" y="104" fill="#d4d4d4" textLength="92.4" lengthAdjust="spacing">integration</text>
@@ -1360,94 +1491,96 @@ text {
 <text class="crt" x="16.8" y="680" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">subagents</text>
 <text class="crt" x="100.8" y="680" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">list</text>
 </g>
-<g id="fd-13" transform="translate(9 36)">
+<g id="fd-14" transform="translate(9 36)">
 <rect width="840" height="720" fill="#1e1e1e"/>
-<text class="crt" x="42" y="14" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">3.</text>
-<text class="crt" x="67.2" y="14" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">Fix</text>
-<text class="crt" x="100.8" y="14" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">auth</text>
-<text class="crt" x="142.8" y="14" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">service</text>
-<text class="crt" x="42" y="32" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">4.</text>
-<text class="crt" x="67.2" y="32" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">Write</text>
-<text class="crt" x="117.6" y="32" fill="#d4d4d4" textLength="92.4" lengthAdjust="spacing">integration</text>
-<text class="crt" x="218.4" y="32" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">tests</text>
-<text class="crt" x="16.8" y="68" fill="#d4d4d4" textLength="84" lengthAdjust="spacing">Completed:</text>
-<text class="crt" x="109.2" y="68" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">2</text>
-<text class="crt" x="126" y="68" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">tasks</text>
-<text class="crt" x="42" y="86" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">+</text>
-<text class="crt" x="58.8" y="86" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">Setup</text>
-<text class="crt" x="109.2" y="86" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">project</text>
-<text class="crt" x="42" y="104" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">+</text>
-<text class="crt" x="58.8" y="104" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">Configure</text>
-<text class="crt" x="142.8" y="104" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">linting</text>
-<text class="crt" x="0" y="122" fill="#10E291" textLength="8.4" lengthAdjust="spacing" style="font-weight:bold;">$</text>
-<text class="crt" x="16.8" y="122" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">subagents</text>
-<text class="crt" x="100.8" y="122" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">cancel</text>
-<text class="crt" x="159.6" y="122" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
-<text class="crt" x="184.8" y="122" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">--task</text>
-<text class="crt" x="243.6" y="122" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">2</text>
-<text class="crt" x="252" y="158" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">Cancelled</text>
-<text class="crt" x="336" y="158" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">0</text>
-<text class="crt" x="352.8" y="158" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">task(s)</text>
-<text class="crt" x="16.8" y="176" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">Session:</text>
-<text class="crt" x="92.4" y="176" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
-<text class="crt" x="0" y="194" fill="#10E291" textLength="8.4" lengthAdjust="spacing" style="font-weight:bold;">$</text>
-<text class="crt" x="16.8" y="194" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">subagents</text>
-<text class="crt" x="100.8" y="194" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">cancel</text>
-<text class="crt" x="159.6" y="194" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
-<text class="crt" x="184.8" y="194" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">--all</text>
-<text class="crt" x="226.8" y="230" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">Cancelled</text>
-<text class="crt" x="310.8" y="230" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">0</text>
-<text class="crt" x="327.6" y="230" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">task(s)</text>
-<text class="crt" x="16.8" y="248" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">Session:</text>
-<text class="crt" x="92.4" y="248" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
-<text class="crt" x="0" y="266" fill="#10E291" textLength="8.4" lengthAdjust="spacing" style="font-weight:bold;">$</text>
-<text class="crt" x="16.8" y="266" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">subagents</text>
-<text class="crt" x="100.8" y="266" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">list</text>
-<text class="crt" x="134.4" y="302" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Agents:</text>
-<text class="crt" x="0" y="320" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">=======</text>
-<text class="crt" x="16.8" y="356" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">architect</text>
-<text class="crt" x="33.6" y="374" fill="#d4d4d4" textLength="100.8" lengthAdjust="spacing">description:</text>
-<text class="crt" x="142.8" y="374" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">Software</text>
-<text class="crt" x="218.4" y="374" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">architect</text>
-<text class="crt" x="33.6" y="392" fill="#d4d4d4" textLength="92.4" lengthAdjust="spacing">definition:</text>
-<text class="crt" x="134.4" y="392" fill="#d4d4d4" textLength="243.6" lengthAdjust="spacing">.agents/subagent/architect.md</text>
-<text class="crt" x="33.6" y="410" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">sessions:</text>
-<text class="crt" x="117.6" y="410" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">(none)</text>
-<text class="crt" x="16.8" y="446" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">builder</text>
-<text class="crt" x="33.6" y="464" fill="#d4d4d4" textLength="100.8" lengthAdjust="spacing">description:</text>
-<text class="crt" x="142.8" y="464" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">Build</text>
-<text class="crt" x="193.2" y="464" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">and</text>
-<text class="crt" x="226.8" y="464" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">test</text>
-<text class="crt" x="268.8" y="464" fill="#d4d4d4" textLength="84" lengthAdjust="spacing">automation</text>
-<text class="crt" x="33.6" y="482" fill="#d4d4d4" textLength="92.4" lengthAdjust="spacing">definition:</text>
-<text class="crt" x="134.4" y="482" fill="#d4d4d4" textLength="226.8" lengthAdjust="spacing">.agents/subagent/builder.md</text>
-<text class="crt" x="33.6" y="500" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">sessions:</text>
-<text class="crt" x="117.6" y="500" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">(none)</text>
-<text class="crt" x="16.8" y="536" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">reviewer</text>
-<text class="crt" x="33.6" y="554" fill="#d4d4d4" textLength="100.8" lengthAdjust="spacing">description:</text>
-<text class="crt" x="142.8" y="554" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">Expert</text>
-<text class="crt" x="201.6" y="554" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">code</text>
-<text class="crt" x="243.6" y="554" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">reviewer</text>
-<text class="crt" x="33.6" y="572" fill="#d4d4d4" textLength="92.4" lengthAdjust="spacing">definition:</text>
-<text class="crt" x="134.4" y="572" fill="#d4d4d4" textLength="235.2" lengthAdjust="spacing">.agents/subagent/reviewer.md</text>
-<text class="crt" x="33.6" y="590" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">sessions:</text>
-<text class="crt" x="50.4" y="608" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">-</text>
-<text class="crt" x="67.2" y="608" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
-<text class="crt" x="92.4" y="608" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">(id:</text>
-<text class="crt" x="134.4" y="608" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">sid-demo,</text>
-<text class="crt" x="218.4" y="608" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">status:</text>
-<text class="crt" x="285.6" y="608" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">crashed)</text>
-<text class="crt" x="16.8" y="644" fill="#d4d4d4" textLength="84" lengthAdjust="spacing">test-queue</text>
-<text class="crt" x="33.6" y="662" fill="#d4d4d4" textLength="100.8" lengthAdjust="spacing">description:</text>
-<text class="crt" x="142.8" y="662" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">Test</text>
-<text class="crt" x="184.8" y="662" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">agent</text>
-<text class="crt" x="235.2" y="662" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">for</text>
-<text class="crt" x="268.8" y="662" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">queue</text>
-<text class="crt" x="319.2" y="662" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">demo</text>
-<text class="crt" x="33.6" y="680" fill="#d4d4d4" textLength="92.4" lengthAdjust="spacing">definition:</text>
-<text class="crt" x="134.4" y="680" fill="#d4d4d4" textLength="252" lengthAdjust="spacing">.agents/subagent/test-queue.md</text>
-<text class="crt" x="33.6" y="698" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">sessions:</text>
-<text class="crt" x="117.6" y="698" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">(none)</text>
+<text class="crt" x="252" y="32" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">Agent:</text>
+<text class="crt" x="310.8" y="32" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">reviewer</text>
+<text class="crt" x="16.8" y="50" fill="#d4d4d4" textLength="100.8" lengthAdjust="spacing">description:</text>
+<text class="crt" x="126" y="50" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">Expert</text>
+<text class="crt" x="184.8" y="50" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">code</text>
+<text class="crt" x="226.8" y="50" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">reviewer</text>
+<text class="crt" x="0" y="86" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">Session:</text>
+<text class="crt" x="75.6" y="86" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
+<text class="crt" x="16.8" y="104" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">Agent:</text>
+<text class="crt" x="84" y="104" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">reviewer</text>
+<text class="crt" x="16.8" y="122" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">ID:</text>
+<text class="crt" x="84" y="122" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">sid-demo</text>
+<text class="crt" x="16.8" y="140" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Status:</text>
+<text class="crt" x="84" y="140" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">crashed</text>
+<text class="crt" x="16.8" y="158" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">CWD:</text>
+<text class="crt" x="84" y="158" fill="#d4d4d4" textLength="260.4" lengthAdjust="spacing">/tmp/.claude/worktrees/refactor</text>
+<text class="crt" x="16.8" y="194" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">&gt;</text>
+<text class="crt" x="33.6" y="194" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">Current:</text>
+<text class="crt" x="109.2" y="194" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Analyze</text>
+<text class="crt" x="176.4" y="194" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">codebase</text>
+<text class="crt" x="16.8" y="230" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">Queue:</text>
+<text class="crt" x="75.6" y="230" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">4</text>
+<text class="crt" x="92.4" y="230" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">tasks</text>
+<text class="crt" x="42" y="248" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">1.</text>
+<text class="crt" x="67.2" y="248" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">Refactor</text>
+<text class="crt" x="142.8" y="248" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">auth</text>
+<text class="crt" x="184.8" y="248" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">module</text>
+<text class="crt" x="42" y="266" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">2.</text>
+<text class="crt" x="67.2" y="266" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">Update</text>
+<text class="crt" x="126" y="266" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">unit</text>
+<text class="crt" x="168" y="266" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">tests</text>
+<text class="crt" x="42" y="284" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">3.</text>
+<text class="crt" x="67.2" y="284" fill="#d4d4d4" textLength="25.2" lengthAdjust="spacing">Fix</text>
+<text class="crt" x="100.8" y="284" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">auth</text>
+<text class="crt" x="142.8" y="284" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">service</text>
+<text class="crt" x="42" y="302" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">4.</text>
+<text class="crt" x="67.2" y="302" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">Write</text>
+<text class="crt" x="117.6" y="302" fill="#d4d4d4" textLength="92.4" lengthAdjust="spacing">integration</text>
+<text class="crt" x="218.4" y="302" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">tests</text>
+<text class="crt" x="16.8" y="338" fill="#d4d4d4" textLength="84" lengthAdjust="spacing">Completed:</text>
+<text class="crt" x="109.2" y="338" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">2</text>
+<text class="crt" x="126" y="338" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">tasks</text>
+<text class="crt" x="42" y="356" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">+</text>
+<text class="crt" x="58.8" y="356" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">Setup</text>
+<text class="crt" x="109.2" y="356" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">project</text>
+<text class="crt" x="42" y="374" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">+</text>
+<text class="crt" x="58.8" y="374" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">Configure</text>
+<text class="crt" x="142.8" y="374" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">linting</text>
+<text class="crt" x="0" y="392" fill="#10E291" textLength="8.4" lengthAdjust="spacing" style="font-weight:bold;">$</text>
+<text class="crt" x="16.8" y="392" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">subagents</text>
+<text class="crt" x="100.8" y="392" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">cancel</text>
+<text class="crt" x="159.6" y="392" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
+<text class="crt" x="184.8" y="392" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">--task</text>
+<text class="crt" x="243.6" y="392" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">2</text>
+<text class="crt" x="252" y="428" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">Cancelled</text>
+<text class="crt" x="336" y="428" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">0</text>
+<text class="crt" x="352.8" y="428" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">task(s)</text>
+<text class="crt" x="16.8" y="446" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">Session:</text>
+<text class="crt" x="92.4" y="446" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
+<text class="crt" x="0" y="464" fill="#10E291" textLength="8.4" lengthAdjust="spacing" style="font-weight:bold;">$</text>
+<text class="crt" x="16.8" y="464" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">subagents</text>
+<text class="crt" x="100.8" y="464" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">cancel</text>
+<text class="crt" x="159.6" y="464" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
+<text class="crt" x="184.8" y="464" fill="#d4d4d4" textLength="42" lengthAdjust="spacing">--all</text>
+<text class="crt" x="226.8" y="500" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">Cancelled</text>
+<text class="crt" x="310.8" y="500" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">0</text>
+<text class="crt" x="327.6" y="500" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">task(s)</text>
+<text class="crt" x="16.8" y="518" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">Session:</text>
+<text class="crt" x="92.4" y="518" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
+<text class="crt" x="0" y="536" fill="#10E291" textLength="8.4" lengthAdjust="spacing" style="font-weight:bold;">$</text>
+<text class="crt" x="16.8" y="536" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">subagents</text>
+<text class="crt" x="100.8" y="536" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">list</text>
+<text class="crt" x="134.4" y="572" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">Agents:</text>
+<text class="crt" x="0" y="590" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">=======</text>
+<text class="crt" x="16.8" y="626" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">reviewer</text>
+<text class="crt" x="33.6" y="644" fill="#d4d4d4" textLength="100.8" lengthAdjust="spacing">description:</text>
+<text class="crt" x="142.8" y="644" fill="#d4d4d4" textLength="50.4" lengthAdjust="spacing">Expert</text>
+<text class="crt" x="201.6" y="644" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">code</text>
+<text class="crt" x="243.6" y="644" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">reviewer</text>
+<text class="crt" x="33.6" y="662" fill="#d4d4d4" textLength="92.4" lengthAdjust="spacing">definition:</text>
+<text class="crt" x="134.4" y="662" fill="#d4d4d4" textLength="646.8" lengthAdjust="spacing">/home/vlln/Project/skill_project/subagent-skills/.agents/subagent/reviewer.md</text>
+<text class="crt" x="33.6" y="680" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">sessions:</text>
+<text class="crt" x="50.4" y="698" fill="#d4d4d4" textLength="8.4" lengthAdjust="spacing">-</text>
+<text class="crt" x="67.2" y="698" fill="#d4d4d4" textLength="16.8" lengthAdjust="spacing">s1</text>
+<text class="crt" x="92.4" y="698" fill="#d4d4d4" textLength="33.6" lengthAdjust="spacing">(id:</text>
+<text class="crt" x="134.4" y="698" fill="#d4d4d4" textLength="75.6" lengthAdjust="spacing">sid-demo,</text>
+<text class="crt" x="218.4" y="698" fill="#d4d4d4" textLength="58.8" lengthAdjust="spacing">status:</text>
+<text class="crt" x="285.6" y="698" fill="#d4d4d4" textLength="67.2" lengthAdjust="spacing">crashed)</text>
 </g>
 </defs>
 <use href="#fd-0" id="frame-0" class="frame frame-0"/>
@@ -1464,4 +1597,5 @@ text {
 <use href="#fd-11" id="frame-11" class="frame frame-11"/>
 <use href="#fd-12" id="frame-12" class="frame frame-12"/>
 <use href="#fd-13" id="frame-13" class="frame frame-13"/>
+<use href="#fd-14" id="frame-14" class="frame frame-14"/>
 </svg>
