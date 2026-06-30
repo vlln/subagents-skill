@@ -46,6 +46,8 @@ You are a code reviewer. Analyze code for correctness, security, and best practi
 - `description` (required) — shown in `list` and `status`.
 - Body (optional) — system prompt. Omit to use the backend's default.
 
+See [`references/example-subagents.md`](references/example-subagents.md) for ready-to-use agent templates (code reviewer, debugger, architect, test writer, etc.).
+
 ## Workflow
 
 ```bash
