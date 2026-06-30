@@ -71,13 +71,21 @@ def _parse_flags(args: list[str]) -> tuple[dict, str | None, bool]:
 
 
 def _discover_topology(mod, wf_args: dict) -> list[dict]:
-    """Run the workflow with stub functions to discover phases only."""
+    """Run the workflow with stub functions to discover phases and estimate agent counts."""
     phases: list[str] = []
+    current_phase: str | None = None
+    phase_agents: dict[str, int] = {}  # track agent count per phase
 
     def _stub_phase(title: str) -> None:
+        nonlocal current_phase
         phases.append(title)
+        current_phase = title
+        if title not in phase_agents:
+            phase_agents[title] = 0
 
     def _stub_agent(prompt: str, *, schema=None, label=None, model=None, backend=None) -> str:
+        if current_phase and current_phase in phase_agents:
+            phase_agents[current_phase] += 1
         return ""
 
     def _stub_parallel(thunks):
@@ -118,7 +126,7 @@ def _discover_topology(mod, wf_args: dict) -> list[dict]:
     except Exception:
         pass
 
-    return [{"title": t} for t in phases]
+    return [{"title": t, "estimated_agents": phase_agents.get(t, 0)} for t in phases]
 
 
 def cmd_run(args: list[str]) -> None:
