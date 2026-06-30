@@ -25,7 +25,9 @@ metadata:
 
 # Workflow
 
-Use `scripts/workflow` to orchestrate multiple AI agents in parallel or pipeline patterns.
+Commands below assume `workflow` is on PATH or invoked from the skill directory. Examples use the short form `workflow` for brevity.
+
+Use `workflow` to orchestrate multiple AI agents in parallel or pipeline patterns.
 
 **Quick start:**
 
@@ -39,7 +41,7 @@ def run(agent, parallel, pipeline, phase, log, args, workflow):
 EOF
 
 # 2. Agent executes it
-scripts/workflow run .agents/workflow/hello.py
+workflow run .agents/workflow/hello.py
 ```
 
 ## Dependencies
@@ -71,13 +73,13 @@ def run(agent, parallel, pipeline, phase, log, args, workflow):
 ### 2. Execute
 
 ```bash
-scripts/workflow run .agents/workflow/code-review.py
+workflow run .agents/workflow/code-review.py
 ```
 
 With arguments:
 
 ```bash
-scripts/workflow run .agents/workflow/code-review.py --args '{"target": "src/"}'
+workflow run .agents/workflow/code-review.py --args '{"target": "src/"}'
 ```
 
 ### 3. Resume on failure
@@ -86,10 +88,10 @@ If the workflow crashes (timeout, agent failure), re-run with the same `--resume
 
 ```bash
 # First run
-scripts/workflow run script.py --resume myrun001
+workflow run script.py --resume myrun001
 
 # Crash... resume:
-scripts/workflow resume myrun001 script.py
+workflow resume myrun001 script.py
 ```
 
 ### 4. Check results
@@ -254,18 +256,18 @@ Workflow prints live progress to stderr during execution, and a summary table on
 
 ```bash
 # List all workflow runs with session status
-scripts/workflow list
+workflow list
 # Run: abc123
 #   ✓ wf_abc123_1  [done]  Review security
 #   … wf_abc123_2  [running]  Review performance
 
 # Detailed status of a single run
-scripts/workflow status abc123
+workflow status abc123
 # Run: abc123
 # Sessions: 1 done, 1 running, 0 failed (total 2)
 
 # Stop a running workflow
-scripts/workflow stop abc123
+workflow stop abc123
 # Stopped 1 session(s) in run 'abc123'.
 ```
 
