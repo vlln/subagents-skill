@@ -31,11 +31,13 @@ def _outputs_dir() -> str:
     return os.path.join(agents_dir, "outputs")
 
 
-def _run_subagent(prompt: str, session: str, backend: str | None = None) -> list[dict]:
+def _run_subagent(prompt: str, session: str, backend: str | None = None, model: str | None = None) -> list[dict]:
     sub = _subagents_path()
     cmd = [sub, "run", "--bg", "--output", "json"]
     if backend:
         cmd.extend(["--backend", backend])
+    if model:
+        cmd.extend(["--model", model])
     cmd.extend([session, prompt])
     subprocess.run(cmd, check=True, capture_output=True)
     result = subprocess.run(
@@ -193,7 +195,7 @@ def agent(
         text, exit_code = _run_mock(prompt)
         elapsed = time.time() - t0
     else:
-        events = _run_subagent(prompt, session, backend=backend)
+        events = _run_subagent(prompt, session, backend=backend, model=model)
         elapsed = time.time() - t0
         exit_code = _extract_exit_code(events)
         text = _extract_text(events) if exit_code == 0 else ""

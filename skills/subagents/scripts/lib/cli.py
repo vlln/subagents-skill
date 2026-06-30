@@ -203,6 +203,7 @@ def cmd_run(args: list[str]) -> None:
     system_mode = "append"
     output_json = False
     cwd: str | None = None
+    model: str | None = None
 
     while args and args[0].startswith("--"):
         flag = args.pop(0)
@@ -214,6 +215,8 @@ def cmd_run(args: list[str]) -> None:
             cwd = os.path.abspath(cwd)
         elif flag == "--backend":
             backend_override = args.pop(0) if args else _fail("--backend requires a value")
+        elif flag == "--model":
+            model = args.pop(0) if args else _fail("--model requires a value")
         elif flag == "--transport":
             transport = args.pop(0) if args else _fail("--transport requires a value")
             if transport not in ("cli", "acp"):
@@ -242,13 +245,13 @@ def cmd_run(args: list[str]) -> None:
         task = " ".join(args) if args else ""
         if not session_name or not task:
             _fail("Usage: subagents run [--bg] [--cwd <path>] <agent> <session> <prompt>")
-        _run_with_agent(agent_name, session_name, task, bg, backend_override, transport, system_mode, output_json, cwd)
+        _run_with_agent(agent_name, session_name, task, bg, backend_override, transport, system_mode, output_json, cwd, model)
     else:
         session_name = args.pop(0)
         task = " ".join(args) if args else ""
         if not task:
             _fail("Usage: subagents run [--bg] [--cwd <path>] <session> <prompt>")
-        _run_no_agent(session_name, task, bg, backend_override, transport, output_json, cwd)
+        _run_no_agent(session_name, task, bg, backend_override, transport, output_json, cwd, model)
 
 
 def _run_with_agent(
@@ -261,12 +264,13 @@ def _run_with_agent(
     system_mode: str,
     output_json: bool,
     cwd: str | None = None,
+    model: str | None = None,
 ) -> None:
     agent = parse_agent(Path(AGENTS_DIR) / f"{agent_name}.md")
     backend_name = backend_override or _detect_backend()
 
     if output_json:
-        _run_with_agent_json(agent, agent_name, session_name, task, bg, backend_name, backend_override, transport, system_mode, cwd)
+        _run_with_agent_json(agent, agent_name, session_name, task, bg, backend_name, backend_override, transport, system_mode, cwd, model)
         return
 
     print(f"[subagents] Agent: {agent.name} — {agent.description}", file=sys.stderr)
@@ -296,10 +300,10 @@ def _run_with_agent(
                 existing_sid = get_session_id(agent_name, session_name)
                 if existing_sid:
                     print("[subagents] Resuming existing session...", file=sys.stderr)
-                    exit_code = backend.resume_session(existing_sid, task, agent.body or None, system_mode=system_mode)
+                    exit_code = backend.resume_session(existing_sid, task, agent.body or None, model=model, system_mode=system_mode)
                 else:
                     print("[subagents] Creating new session...", file=sys.stderr)
-                    sid, exit_code = backend.create_session(task, agent.body or None, system_mode=system_mode)
+                    sid, exit_code = backend.create_session(task, agent.body or None, model=model, system_mode=system_mode)
                     register(agent_name, session_name, sid, cwd=cwd, background=bg)
                     print(f"[subagents] Session registered: {agent_name}/{session_name}", file=sys.stderr)
             finally:
@@ -316,7 +320,7 @@ def _run_with_agent(
             os.chdir(original_cwd)
 
     if bg:
-        _execute_in_background(session_name, lock_path, _execute, output_json=False, agent_name=agent_name, queue_mode=True, cwd=cwd)
+        _execute_in_background(session_name, lock_path, _execute, output_json=False, agent_name=agent_name, queue_mode=True, cwd=cwd, model=model)
     else:
         sys.exit(_execute())
 
@@ -332,6 +336,7 @@ def _run_with_agent_json(
     transport: str | None,
     system_mode: str,
     cwd: str | None = None,
+    model: str | None = None,
 ) -> None:
     emitter = JsonlEmitter()
     emitter.agent_start(session_name, agent=agent_name, backend=backend_name)
@@ -354,9 +359,9 @@ def _run_with_agent_json(
             try:
                 existing_sid = get_session_id(agent_name, session_name)
                 if existing_sid:
-                    exit_code = backend.resume_session(existing_sid, task, agent.body or None, system_mode=system_mode)
+                    exit_code = backend.resume_session(existing_sid, task, agent.body or None, model=model, system_mode=system_mode)
                 else:
-                    sid, exit_code = backend.create_session(task, agent.body or None, system_mode=system_mode)
+                    sid, exit_code = backend.create_session(task, agent.body or None, model=model, system_mode=system_mode)
                     register(agent_name, session_name, sid, cwd=cwd, background=bg)
             finally:
                 backend.close()
@@ -378,7 +383,7 @@ def _run_with_agent_json(
         file_emitter = JsonlEmitter(open(output_file, "w"))
         file_emitter.agent_start(session_name, agent=agent_name, backend=backend_name)
         emitter.close()
-        _execute_in_background(session_name, lock_path, lambda: _execute(file_emitter), output_json=True, agent_name=agent_name, queue_mode=True, cwd=cwd)
+        _execute_in_background(session_name, lock_path, lambda: _execute(file_emitter), output_json=True, agent_name=agent_name, queue_mode=True, cwd=cwd, model=model)
     else:
         sys.exit(_execute(emitter))
 
@@ -391,12 +396,13 @@ def _run_no_agent(
     transport: str | None,
     output_json: bool,
     cwd: str | None = None,
+    model: str | None = None,
 ) -> None:
     """Run without agent file — create if new, resume if exists."""
     backend_name = backend_override or _detect_backend()
 
     if output_json:
-        _run_no_agent_json(session_name, task, bg, backend_name, backend_override, transport, cwd)
+        _run_no_agent_json(session_name, task, bg, backend_name, backend_override, transport, cwd, model)
         return
 
     print(f"[subagents] Session name: {session_name}", file=sys.stderr)
@@ -427,10 +433,10 @@ def _run_no_agent(
             try:
                 if existing_sid:
                     print("[subagents] Resuming existing session...", file=sys.stderr)
-                    exit_code = backend.resume_session(existing_sid, task)
+                    exit_code = backend.resume_session(existing_sid, task, model=model)
                 else:
                     print("[subagents] Creating new session...", file=sys.stderr)
-                    sid, exit_code = backend.create_session(task)
+                    sid, exit_code = backend.create_session(task, model=model)
                     register(session_name, session_name, sid, cwd=cwd, background=bg)
                     print(f"[subagents] Session registered: {session_name}", file=sys.stderr)
             finally:
@@ -447,7 +453,7 @@ def _run_no_agent(
             os.chdir(original_cwd)
 
     if bg:
-        _execute_in_background(session_name, lock_path, _execute, output_json=False, agent_name=session_name, queue_mode=True, cwd=cwd)
+        _execute_in_background(session_name, lock_path, _execute, output_json=False, agent_name=session_name, queue_mode=True, cwd=cwd, model=model)
     else:
         sys.exit(_execute())
 
@@ -460,6 +466,7 @@ def _run_no_agent_json(
     backend_override: str | None,
     transport: str | None,
     cwd: str | None = None,
+    model: str | None = None,
 ) -> None:
     emitter = JsonlEmitter()
     emitter.agent_start(session_name, backend=backend_name)
@@ -506,7 +513,7 @@ def _run_no_agent_json(
         file_emitter = JsonlEmitter(open(output_file, "w"))
         file_emitter.agent_start(session_name, backend=backend_name)
         emitter.close()
-        _execute_in_background(session_name, lock_path, lambda: _execute(file_emitter), output_json=True, agent_name=session_name, queue_mode=True, cwd=cwd)
+        _execute_in_background(session_name, lock_path, lambda: _execute(file_emitter), output_json=True, agent_name=session_name, queue_mode=True, cwd=cwd, model=model)
     else:
         sys.exit(_execute(emitter))
 
@@ -515,7 +522,7 @@ def _jsonl_output_path(session_name: str) -> str:
     return os.path.join(OUTPUT_DIR, f"{session_name}.jsonl")
 
 
-def _queue_worker(agent_name: str, session_name: str, initial_task_fn, cwd: str | None) -> int:
+def _queue_worker(agent_name: str, session_name: str, initial_task_fn, cwd: str | None, model: str | None) -> int:
     """Background worker that processes initial task and then queue.
 
     Returns exit code of last executed task.
@@ -559,7 +566,7 @@ def _queue_worker(agent_name: str, session_name: str, initial_task_fn, cwd: str 
         # Create backend and execute task
         backend = _make_backend(None, None)  # Use defaults
         try:
-            exit_code = backend.resume_session(sid, task["prompt"])
+            exit_code = backend.resume_session(sid, task["prompt"], model=model)
         except Exception as e:
             print(f"[subagents] Task failed: {e}", file=sys.stderr)
             exit_code = 1
@@ -579,7 +586,7 @@ def _queue_worker(agent_name: str, session_name: str, initial_task_fn, cwd: str 
     return exit_code
 
 
-def _execute_in_background(session_name: str, lock_path: Path, fn, output_json: bool = False, agent_name: str | None = None, queue_mode: bool = False, cwd: str | None = None) -> None:
+def _execute_in_background(session_name: str, lock_path: Path, fn, output_json: bool = False, agent_name: str | None = None, queue_mode: bool = False, cwd: str | None = None, model: str | None = None) -> None:
     if not hasattr(os, "fork"):
         release(lock_path)
         _fail("Background mode (--bg) requires Unix (os.fork not available on this platform)")
@@ -590,7 +597,7 @@ def _execute_in_background(session_name: str, lock_path: Path, fn, output_json: 
 
         # If queue mode, wrap fn with queue worker
         if queue_mode and agent_name:
-            exit_code = _queue_worker(agent_name, session_name, fn, cwd)
+            exit_code = _queue_worker(agent_name, session_name, fn, cwd, model)
         else:
             exit_code = fn()
 
@@ -795,6 +802,7 @@ def cmd_goal(args: list[str]) -> None:
     cwd: str | None = None
     backend_override: str | None = None
     transport: str | None = None
+    model: str | None = None
 
     while args and args[0].startswith("--"):
         flag = args.pop(0)
@@ -813,6 +821,8 @@ def cmd_goal(args: list[str]) -> None:
         elif flag == "--cwd":
             cwd = args.pop(0) if args else _fail("--cwd requires a value")
             cwd = os.path.abspath(cwd)
+        elif flag == "--model":
+            model = args.pop(0) if args else _fail("--model requires a value")
         elif flag == "--backend":
             backend_override = args.pop(0) if args else _fail("--backend requires a value")
         elif flag == "--transport":
@@ -932,9 +942,10 @@ def cmd_goal(args: list[str]) -> None:
             backend_override=backend_override,
             transport=transport,
             cwd=cwd,
+            model=model,
         )
 
-    _execute_in_background(session_name, lock_path, _goal_fn, output_json=False, agent_name=agent_name, queue_mode=False, cwd=cwd)
+    _execute_in_background(session_name, lock_path, _goal_fn, output_json=False, agent_name=agent_name, queue_mode=False, cwd=cwd, model=model)
 
 
 def _goal_worker(
@@ -947,6 +958,7 @@ def _goal_worker(
     backend_override: str | None,
     transport: str | None,
     cwd: str | None,
+    model: str | None = None,
 ) -> int:
     """Goal worker: runs the agent in a loop until goal is met or max iterations reached.
 
@@ -998,11 +1010,11 @@ def _goal_worker(
             try:
                 if not session_id:
                     # New session: create on first iteration
-                    session_id, exit_code = backend.create_session(prompt, agent_body, system_mode="append")
+                    session_id, exit_code = backend.create_session(prompt, agent_body, model=model, system_mode="append")
                     register(agent_name, session_name, session_id, cwd=cwd, background=False)
                     print(f"[subagents] Session created: {agent_name}/{session_name}", file=sys.stderr)
                 else:
-                    exit_code = backend.resume_session(session_id, prompt, agent_body, system_mode="append")
+                    exit_code = backend.resume_session(session_id, prompt, agent_body, model=model, system_mode="append")
             finally:
                 backend.close()
 
@@ -1390,11 +1402,11 @@ def _print_help() -> None:
     print("Usage: subagents <command> [args...]", file=sys.stderr)
     print(file=sys.stderr)
     print("Commands:", file=sys.stderr)
-    print("  run [--bg] [--cwd <path>] [--backend <name>] [--transport cli|acp] [--system-mode append|overwrite] [--output json] <agent> <session> <prompt>", file=sys.stderr)
+    print("  run [--bg] [--cwd <path>] [--backend <name>] [--model <name>] [--transport cli|acp] [--system-mode append|overwrite] [--output json] <agent> <session> <prompt>", file=sys.stderr)
     print("  run [--bg] [--cwd <path>] [--output json] <session> <prompt>", file=sys.stderr)
     print("  send [--prompt-file <file>] <session> [prompt]    # Add task to background session queue", file=sys.stderr)
     print("  cancel [--all | --task N | --goal] <session>          # Cancel queued tasks or goal", file=sys.stderr)
-    print("  goal [--clear|--show] [--max-iterations N] [--cwd <path>] <agent> <session> [goal]", file=sys.stderr)
+    print("  goal [--clear|--show] [--max-iterations N] [--cwd <path>] [--model <name>] <agent> <session> [goal]", file=sys.stderr)
     print("  wait [--output json] <session>", file=sys.stderr)
     print("  list [--output json]", file=sys.stderr)
     print("  status [--output json] <agent> [session]", file=sys.stderr)
