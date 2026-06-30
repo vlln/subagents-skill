@@ -60,6 +60,10 @@
 
 通过 `workflow.py` 实现流水线、并行和嵌套工作流。串联 Agent、分叉合并、恢复失败阶段 —— 声明式组合复杂的多 Agent 拓扑。
 
+<p align="center">
+  <img src="../workflow.svg" alt="Workflow 演示：实时 TTY 树形渲染、分阶段、spinner 动画" width="100%" />
+</p>
+
 </td>
 <td width="50%" valign="top">
 
@@ -180,6 +184,29 @@ scripts/subagents wait r1 && scripts/subagents wait r2 && scripts/subagents wait
 
 # 列出所有 Agent 和会话
 scripts/subagents list
+```
+
+<p align="center">
+  <img src="../subagents.svg" alt="Subagents 演示：任务队列、cwd 隔离、send/cancel/status" width="100%" />
+</p>
+
+## 演示录制
+
+使用 [console2svg](https://github.com/vlln/console2svg) 录制动态终端演示：
+
+```bash
+# 安装
+npm install -g console2svg
+
+# 录制 subagents 演示（队列、cwd、send、cancel、status）
+console2svg "bash demos/subagents-demo.sh" \
+    -o docs/subagents.svg -w 100 -h 40 \
+    -d macos --theme dark -v --fps 12 --no-loop --timeout 25
+
+# 录制 workflow 演示（TTY 树、阶段、spinner、实时更新）
+console2svg "bash demos/workflow-demo.sh" \
+    -o docs/workflow.svg -w 100 -h 36 \
+    -d macos --theme dark -v --fps 12 --no-loop --timeout 15
 ```
 
 ## 开发
