@@ -9,9 +9,9 @@
 <p align="center">
   <a href="https://github.com/vlln/subagents-skill/stargazers"><img src="https://badgen.net/github/stars/vlln/subagents-skill?label=%E2%98%85" alt="GitHub stars" /></a>
   <img src="https://badgen.net/badge/license/MIT/blue" alt="MIT" />
+  <img src="https://badgen.net/badge/spec/Agent%20Skills/8257D0" alt="Agent Skills spec" />
   <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10+" />
   <img src="https://img.shields.io/badge/dependencies-zero-44CC11?style=flat-square" alt="Zero dependencies" />
-  <img src="https://img.shields.io/badge/spec-Agent%20Skills-8257D0?style=flat-square" alt="Agent Skills spec" />
 </p>
 
 <p align="center">
@@ -19,6 +19,37 @@
 </p>
 
 ---
+
+## Installation
+
+### [skit](https://github.com/vlln/skit) (Recommended)
+
+```bash
+skit install https://github.com/vlln/subagents-skill/tree/main/skills/subagents
+skit install https://github.com/vlln/subagents-skill/tree/main/skills/workflow
+```
+
+### Manually
+
+| Agent | Command |
+|-------|---------|
+| **Claude Code** | `cp -r skills/subagents .claude/skills/ && cp -r skills/workflow .claude/skills/` |
+| **Codex** | `cp -r skills/subagents ~/.codex/skills/ && cp -r skills/workflow ~/.codex/skills/` |
+| **OpenCode** | `git clone https://github.com/vlln/subagents-skill.git ~/.opencode/skills/subagents-skills` |
+| **Kimi** | `cp -r skills/subagents ~/.kimi/skills/ && cp -r skills/workflow ~/.kimi/skills/` |
+
+---
+
+## Skills
+
+| Skill | Description |
+|-------|-------------|
+| [subagents](skills/subagents/SKILL.md) | Dispatch tasks to named agent sessions across multiple backends. Session resume, parallel swarms, JSONL output. |
+| [workflow](skills/workflow/SKILL.md) | Multi-agent orchestration — pipeline, parallel, and phase-based workflows. Nested sub-workflows, resume, structured output. |
+
+## Requirements
+
+- Python 3.10+
 
 ## Supported Backends
 
@@ -110,56 +141,6 @@ Python 3.10+ standard library only. No `pip install`, no `virtualenv`. Drop the 
 </td>
 </tr>
 </table>
-
-## Installation
-
-### [skit](https://github.com/vlln/skit) (Recommended)
-
-```bash
-skit install ./subagents-skills --all
-```
-
-### Manually
-
-<table>
-<tr>
-<td width="33%">
-
-**Claude Code**
-
-```bash
-cp -r skills/subagents .claude/skills/
-```
-
-</td>
-<td width="33%">
-
-**Codex**
-
-```bash
-cp -r skills/subagents ~/.codex/skills/
-```
-
-</td>
-<td width="33%">
-
-**OpenCode**
-
-```bash
-git clone https://github.com/vlln/subagents-skill.git \
-  ~/.opencode/skills/subagents-skills
-```
-
-</td>
-</tr>
-</table>
-
-## Skills
-
-| Skill | Description |
-|-------|-------------|
-| [subagents](skills/subagents/SKILL.md) | Dispatch tasks to named agent sessions across multiple backends. Session resume, parallel swarms, JSONL output. |
-| [workflow](skills/workflow/SKILL.md) | Multi-agent orchestration — pipeline, parallel, and phase-based workflows. Nested sub-workflows, resume, structured output. |
 
 ## Quick Start
 
