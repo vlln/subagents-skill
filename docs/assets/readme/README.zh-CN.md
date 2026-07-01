@@ -56,23 +56,23 @@
 <tr>
 <td width="50%" valign="top">
 
-### 🔗 动态工作流编排
+### 🔗 工作流编排
 
 通过 `workflow.py` 实现流水线、并行和嵌套工作流。串联 Agent、分叉合并、恢复失败阶段 —— 声明式组合复杂的多 Agent 拓扑。
 
 <p align="center">
-  <img src="../workflow.svg" alt="Workflow 演示：实时 TTY 树形渲染、分阶段、spinner 动画" width="100%" />
+  <img src="../assets/workflow.svg" alt="Workflow 演示：实时 TTY 树形渲染、分阶段、spinner 动画" width="100%" />
 </p>
 
 </td>
 <td width="50%" valign="top">
 
-### 🧩 任意 Agent CLI 作为子代理
+### 🧩 任意 Agent 作为子代理
 
 将任意 CLI Agent 封装为可复用的子代理。自动检测后端，也可通过 `--backend` 手动指定。可扩展 —— 几行代码即可添加新后端。
 
 <p align="center">
-  <img src="../subagents.svg" alt="Subagents 演示：任务队列、cwd 隔离、send/cancel/status" width="100%" />
+  <img src="../assets/subagents.svg" alt="Subagents 演示：任务队列、cwd 隔离、send/cancel/status" width="100%" />
 </p>
 
 </td>
@@ -87,25 +87,45 @@
 </td>
 <td width="50%" valign="top">
 
-### ⚡ 并行集群
+### ⚡ Swarm 终端网格
 
-通过 `--bg` 将任务分发到多个 Agent，用 `subagents wait` 收集结果。同时对 10 个文件运行 10 个 reviewer。
+`subagents swarm` 并行启动 N 个 Agent，实时显示 braille 进度条网格。同时监控每个 Agent 的工具调用次数、耗时和状态。
+
+```bash
+subagents swarm reviewer rev \
+  --template "审查 {{item}}" \
+  --items "src/auth.ts" "src/db.ts" "src/api.ts"
+```
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-### 📡 JSONL 输出
+### 📬 任务队列
 
-`--output json` 提供结构化、可流式传输、版本化的 JSONL 输出。每个事件都有类型和时间戳，可直接接入其他工具。
+后台会话（`--bg`）支持顺序任务队列。用 `subagents send` 在会话运行时追加任务，可取消单个任务或清空队列。
+
+```bash
+subagents run --bg reviewer s1 "分析代码"
+subagents send s1 "根据分析结果重构"
+subagents send s1 "更新测试"
+subagents cancel s1 --task 2
+subagents wait s1
+```
 
 </td>
 <td width="50%" valign="top">
 
-### 🪶 零依赖
+### 🎯 目标驱动
 
-仅需 Python 3.10+ 标准库。无需 `pip install`，无需 `virtualenv`。丢进目录就能跑。
+给出高层目标，Agent 自行评估并迭代，完成或达到最大迭代次数时自动停止。无需逐步指示 —— 只需目标。
+
+```bash
+subagents goal reviewer auth-review \
+  "重构认证模块：JWT 方式，所有测试通过，API 文档已更新"
+subagents wait auth-review
+```
 
 </td>
 </tr>
@@ -158,7 +178,7 @@ git clone https://github.com/vlln/subagents-skill.git \
 
 | Skill | 描述 |
 |-------|-------------|
-| [subagents](skills/subagents/SKILL.md) | 将任务分发到多个后端的命名 Agent 会话。支持会话恢复、并行集群、JSONL 输出。 |
+| [subagents](skills/subagents/SKILL.md) | 将任务分发到命名 Agent 会话。支持会话恢复、后台队列、目标驱动、并行集群、JSONL 输出。 |
 | [workflow](skills/workflow/SKILL.md) | 多 Agent 编排 —— 流水线、并行、分阶段工作流。嵌套子工作流、恢复、结构化输出。 |
 
 ## 快速开始
@@ -180,11 +200,20 @@ scripts/subagents run reviewer review-auth "审查 src/auth.ts 的安全性"
 # 恢复会话，追加更多上下文
 scripts/subagents run reviewer review-auth "现在检查错误处理逻辑"
 
-# 并行运行 3 个 reviewer
+# 并行运行 3 个 reviewer（传统 bg + wait 方式）
 scripts/subagents run --bg reviewer r1 "审查 src/auth.ts"
 scripts/subagents run --bg reviewer r2 "审查 src/db.ts"
 scripts/subagents run --bg reviewer r3 "审查 src/api.ts"
 scripts/subagents wait r1 && scripts/subagents wait r2 && scripts/subagents wait r3
+
+# 或使用 swarm 命令，带 TUI 进度网格
+scripts/subagents swarm reviewer rev \
+  --template "审查 {{item}}" \
+  --items "src/auth.ts" "src/db.ts" "src/api.ts"
+
+# 目标驱动：让 Agent 自主完成任务
+scripts/subagents goal reviewer auth-review \
+  "重构认证模块：JWT 方式，所有测试通过"
 
 # 列出所有 Agent 和会话
 scripts/subagents list
@@ -200,12 +229,12 @@ npm install -g console2svg
 
 # 录制 subagents 演示（队列、cwd、send、cancel、status）
 console2svg "bash demos/subagents-demo.sh" \
-    -o docs/subagents.svg -w 100 -h 40 \
+    -o docs/assets/subagents.svg -w 100 -h 40 \
     -d macos --theme dark -v --fps 12 --timeout 25
 
 # 录制 workflow 演示（TTY 树、阶段、spinner、实时更新）
 console2svg "bash demos/workflow-demo.sh" \
-    -o docs/workflow.svg -w 100 -h 36 \
+    -o docs/assets/workflow.svg -w 100 -h 36 \
     -d macos --theme dark -v --fps 12 --timeout 15
 ```
 
@@ -224,8 +253,10 @@ SKIP_INTEGRATION=0 python3 -m pytest tests/ -v
 
 | 层级 | 文件 | 用例数 | 触发方式 | 耗时 |
 |-------|------|-------|---------|------|
-| 单元 | `tests/test_subagents.py` | 79 | `pytest` 自动 | <1s |
+| 单元 | `tests/test_subagents.py` | 82 | `pytest` 自动 | <1s |
+| 单元 | `tests/test_progress.py` | 21 | `pytest` 自动 | <1s |
 | 单元 | `tests/test_workflow.py` | 26 | `pytest` 自动 | <1s |
+| 集成 | `tests/test_progress_integration.py` | 6 | `pytest` 自动 | ~12s |
 | 集成 | `tests/test_integration.py` | 8 | `SKIP_INTEGRATION=0` | ~3min |
 
 ## License
