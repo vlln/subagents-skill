@@ -5,11 +5,16 @@ from __future__ import annotations
 from base import BaseBackend
 from acp_backend import AcpBackend
 from cli_backend import CliBackend
+from utils import check_acp
 
 
 class OpencodeBackend(BaseBackend):
+    """Backend for opencode. Tries ACP first, falls back to CLI."""
+
     def __init__(self, transport: str | None = None, text_handler=None, backend_name: str = "opencode"):
-        use_acp = transport == "acp"
+        use_acp = transport == "acp" or (transport is None and check_acp(["opencode", "acp"]))
+        if transport == "cli":
+            use_acp = False
         self._th = text_handler
         if use_acp:
             self._acp = AcpBackend(["opencode", "acp"], text_handler=text_handler)

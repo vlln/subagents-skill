@@ -11,7 +11,7 @@ from transports.acp import AcpTransport
 
 
 class AcpBackend(BaseBackend):
-    """Base for ACP backends. Handles initialize, session/new, session/load, session/prompt.
+    """Base for ACP backends. Handles initialize, authentication, session/new, session/load, session/prompt.
 
     Subclasses only need to pass the command (e.g. ["kimi", "acp"]).
 
@@ -25,6 +25,8 @@ class AcpBackend(BaseBackend):
         )
         self._text_handler = text_handler
         self._transport.on_notification("session/update", self._on_update)
+        self._auth_methods: list[dict] = []
+        self._authenticated = False
 
     def _on_update(self, params: dict) -> None:
         u = params.get("update", {})
@@ -37,11 +39,51 @@ class AcpBackend(BaseBackend):
                     sys.stdout.write(c["text"])
                     sys.stdout.flush()
 
+    def _ensure_initialized(self) -> None:
+        """Start transport and initialize, storing auth methods."""
+        self._transport.start()
+        r = self._transport.call("initialize", {
+            "protocolVersion": 1,
+            "clientInfo": {"name": "subagents", "version": "0.1.0"},
+            "capabilities": {"prompt": {"text": True}, "terminal": False},
+        })
+        self._auth_methods = r.get("authMethods", [])
+
+    def _authenticate(self) -> None:
+        """Try to authenticate with the agent.  Raises if no method works."""
+        if self._authenticated:
+            return
+        if not self._auth_methods:
+            return  # no auth required
+
+        for method in self._auth_methods:
+            method_id = method.get("id", "")
+            if not method_id:
+                continue
+            try:
+                self._transport.call("authenticate", {"methodId": method_id})
+                self._authenticated = True
+                return
+            except Exception:
+                continue
+
+        raise RuntimeError(
+            f"ACP: authentication failed. Available methods: "
+            f"{[m.get('id', '?') for m in self._auth_methods]}"
+        )
+
     def create_session(
         self, user: str, system: str | None = None, model: str | None = None, system_mode: str = "append"
     ) -> tuple[str, int]:
-        self._transport.start()
-        r = self._transport.call("session/new", {"cwd": str(Path.cwd()), "mcpServers": []})
+        self._ensure_initialized()
+
+        # Try session/new; if it fails with auth error, authenticate and retry
+        try:
+            r = self._transport.call("session/new", {"cwd": str(Path.cwd()), "mcpServers": []})
+        except RuntimeError:
+            self._authenticate()
+            r = self._transport.call("session/new", {"cwd": str(Path.cwd()), "mcpServers": []})
+
         sid = r.get("sessionId", "")
         if not sid:
             raise RuntimeError("ACP: session/new returned no sessionId")
@@ -60,8 +102,22 @@ class AcpBackend(BaseBackend):
     def resume_session(
         self, session_id: str, user: str, system: str | None = None, model: str | None = None, system_mode: str = "append"
     ) -> int:
-        self._transport.start()
-        self._transport.call("session/load", {"sessionId": session_id})
+        self._ensure_initialized()
+
+        try:
+            self._transport.call("session/load", {
+                "sessionId": session_id,
+                "cwd": str(Path.cwd()),
+                "mcpServers": [],
+            })
+        except RuntimeError:
+            self._authenticate()
+            self._transport.call("session/load", {
+                "sessionId": session_id,
+                "cwd": str(Path.cwd()),
+                "mcpServers": [],
+            })
+
         if model:
             self._transport.call("session/set_model", {"sessionId": session_id, "modelId": model})
         prompt = f"{system}\n\n{user}" if system else user

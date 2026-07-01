@@ -12,7 +12,7 @@ class GeminiBackend(BaseBackend):
     """Backend for gemini-cli. Tries ACP first, falls back to CLI."""
 
     def __init__(self, transport: str | None = None, text_handler=None, backend_name: str = "gemini"):
-        use_acp = transport == "acp" or (transport is None and check_acp("gemini"))
+        use_acp = transport == "acp" or (transport is None and check_acp(["gemini", "--acp"]))
         if transport == "cli":
             use_acp = False
         self._th = text_handler
