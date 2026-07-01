@@ -1048,6 +1048,13 @@ def _goal_worker(
 
 # ── wait ──────────────────────────────────────────────────────────────────
 
+def _term_width() -> int:
+    try:
+        return os.get_terminal_size().columns
+    except (OSError, ValueError):
+        return 80
+
+
 def cmd_wait(args: list[str]) -> None:
     if not args:
         _fail("Usage: subagents wait <session>")
@@ -1074,18 +1081,25 @@ def cmd_wait(args: list[str]) -> None:
             return
         _fail(f"session '{session_name}' not found (never started or already cleaned up)")
 
-    # Find agent for this session to show queue progress
     from registry import find_agent_for_session, get_session_data
 
     agent_name = find_agent_for_session(session_name)
-    last_status = ""
     is_tty = sys.stderr.isatty()
 
+    if is_tty:
+        _wait_tui(session_name, agent_name, output_file)
+    else:
+        _wait_text(session_name, agent_name, output_file)
+
+
+def _wait_text(session_name: str, agent_name: str | None, output_file: Path) -> None:
+    from registry import get_session_data
+
+    last_status = ""
     print(f"Waiting for session '{session_name}'...", file=sys.stderr)
 
     while check(session_name):
-        # Only show live progress in TTY mode
-        if is_tty and agent_name:
+        if agent_name:
             session_data = get_session_data(agent_name, session_name)
             if session_data and session_data.get("mode") == "background":
                 current = session_data.get("current_task")
@@ -1111,6 +1125,51 @@ def cmd_wait(args: list[str]) -> None:
     print(f"Session '{session_name}' finished.", file=sys.stderr)
 
 
+def _wait_tui(session_name: str, agent_name: str | None, output_file: Path) -> None:
+    """TUI wait: progress bar with elapsed time."""
+    _progress_lib = str(Path(__file__).resolve().parent.parent.parent / "lib")
+    sys.path.insert(0, _progress_lib)
+    from progress import ProgressEstimator, AgentProgressRenderer
+
+    estimator = ProgressEstimator()
+    renderer = AgentProgressRenderer()
+    w = _term_width()
+
+    estimator.ensure_member(session_name)
+    estimator.mark_started(session_name, now_ms=time.time() * 1000)
+
+    def _render_frame(lines):
+        sys.stderr.write("\r\033[K")
+        for line in lines:
+            sys.stderr.write(line + "\n")
+        if lines:
+            sys.stderr.write(f"\033[{len(lines)}A")
+        sys.stderr.flush()
+
+    try:
+        sys.stderr.write("\033[?25l")  # hide cursor
+        while check(session_name):
+            now_ms = time.time() * 1000
+            est = estimator.estimate(session_name, 42, now_ms)
+            lines = renderer.render_single(est, w, label=session_name)
+            _render_frame(lines)
+            time.sleep(0.08)
+
+        estimator.mark_completed(session_name, now_ms=time.time() * 1000)
+        est = estimator.estimate(session_name, 42, time.time() * 1000)
+        sys.stderr.write("\r\033[K")
+        for line in renderer.render_single(est, w, label=session_name):
+            sys.stderr.write(line + "\n")
+        sys.stderr.flush()
+    finally:
+        sys.stderr.write("\033[?25h\n")  # show cursor, newline
+        sys.stderr.flush()
+
+    if output_file.is_file():
+        print(output_file.read_text())
+    print(f"Session '{session_name}' finished.", file=sys.stderr)
+
+
 def _wait_json(session_name: str) -> None:
     jsonl_file = _jsonl_output_path(session_name)
     if not check(session_name):
@@ -1128,6 +1187,177 @@ def _wait_json(session_name: str) -> None:
             for line in fh:
                 sys.stdout.write(line)
         sys.stdout.flush()
+
+
+# ── swarm ──────────────────────────────────────────────────────────────────
+
+def cmd_swarm(args: list[str]) -> None:
+    """Run a swarm of agents with TUI grid progress.
+
+    Usage: subagents swarm <agent> <prefix> --template "..." --items "a" "b" "c"
+    """
+    agent_name = ""
+    prefix = ""
+    template = ""
+    items: list[str] = []
+    backend_override: str | None = None
+    concurrency = 0  # 0 = unlimited
+    model: str | None = None
+
+    # Parse positional args first
+    positional: list[str] = []
+    while args and not args[0].startswith("--"):
+        positional.append(args.pop(0))
+
+    if len(positional) >= 2:
+        agent_name = positional[0]
+        prefix = positional[1]
+
+    # Parse flags
+    while args:
+        flag = args.pop(0)
+        if flag == "--template":
+            template = args.pop(0) if args else _fail("--template requires a value")
+        elif flag == "--items":
+            while args and not args[0].startswith("--"):
+                items.append(args.pop(0))
+        elif flag == "--items-file":
+            fpath = args.pop(0) if args else _fail("--items-file requires a value")
+            try:
+                with open(fpath) as f:
+                    for line in f:
+                        line = line.strip()
+                        if line:
+                            items.append(line)
+            except IOError as e:
+                _fail(f"Failed to read items file: {e}")
+        elif flag == "--backend":
+            backend_override = args.pop(0) if args else _fail("--backend requires a value")
+        elif flag == "--concurrency":
+            concurrency = int(args.pop(0)) if args else _fail("--concurrency requires a value")
+        elif flag == "--model":
+            model = args.pop(0) if args else _fail("--model requires a value")
+        elif flag == "--max-columns":
+            pass  # handled by renderer
+        else:
+            _fail(f"unknown flag {flag}")
+
+    if not agent_name or not prefix:
+        _fail("Usage: subagents swarm <agent> <prefix> --template <tmpl> --items <item1> [item2...]")
+    if not items:
+        _fail("No items provided. Use --items or --items-file.")
+    if not template:
+        _fail("--template is required.")
+    if "{{item}}" not in template:
+        _fail("--template must contain {{item}} placeholder.")
+
+    agent_path = Path(AGENTS_DIR) / f"{agent_name}.md"
+    if not agent_path.is_file():
+        _fail(f"agent '{agent_name}' not found (create .agents/subagents/{agent_name}.md first)")
+
+    agent = parse_agent(agent_path)
+    backend_name = backend_override or _detect_backend()
+
+    # Import progress lib
+    _progress_lib = str(Path(__file__).resolve().parent.parent.parent / "lib")
+    if _progress_lib not in sys.path:
+        sys.path.insert(0, _progress_lib)
+    from progress import ProgressEstimator, AgentProgressRenderer
+
+    estimator = ProgressEstimator()
+    renderer = AgentProgressRenderer()
+    w = _term_width()
+
+    total = len(items)
+    keys = [f"{prefix}-{i+1:03d}" for i in range(total)]
+
+    print(f"[subagents] Swarm: {total} agents, backend: {backend_name}", file=sys.stderr)
+    print(f"[subagents] Agent: {agent.name} — {agent.description}", file=sys.stderr)
+    print(f"[subagents] Press Ctrl-C to cancel.", file=sys.stderr)
+
+    # Run agents in threads
+    import threading
+
+    results: dict[str, dict] = {}
+    errors: dict[str, str] = {}
+    lock = threading.Lock()
+    sem = threading.Semaphore(concurrency if concurrency > 0 else total)
+
+    def _run_one(key: str, item: str):
+        sem.acquire()
+        try:
+            estimator.ensure_member(key)
+            estimator.mark_started(key, now_ms=time.time() * 1000)
+
+            # Build prompt from template
+            prompt = template.replace("{{item}}", item)
+
+            # Run via backend
+            backend = _make_backend(backend_override, None)
+            try:
+                existing_sid = get_session_id(agent_name, key)
+                if existing_sid:
+                    exit_code = backend.resume_session(existing_sid, prompt, agent.body or None, model=model)
+                else:
+                    sid, exit_code = backend.create_session(prompt, agent.body or None, model=model)
+                    register(agent_name, key, sid, background=False)
+
+                with lock:
+                    results[key] = {"item": item, "exit_code": exit_code}
+            except Exception as e:
+                with lock:
+                    errors[key] = str(e)
+                estimator.mark_failed(key, now_ms=time.time() * 1000)
+            finally:
+                backend.close()
+                if key not in errors:
+                    estimator.mark_completed(key, now_ms=time.time() * 1000)
+        finally:
+            sem.release()
+
+    threads = []
+    for i, (key, item) in enumerate(zip(keys, items)):
+        t = threading.Thread(target=_run_one, args=(key, item), daemon=True)
+        t.start()
+        threads.append(t)
+
+    # TUI render loop
+    def _render_frame(lines):
+        sys.stderr.write("\r\033[K")
+        for line in lines:
+            sys.stderr.write(line + "\n")
+        if lines:
+            sys.stderr.write(f"\033[{len(lines)}A")
+        sys.stderr.flush()
+
+    try:
+        sys.stderr.write("\033[?25l")
+        while any(t.is_alive() for t in threads):
+            now_ms = time.time() * 1000
+            estimates = estimator.estimate_all(42, now_ms)
+            lines = renderer.render_grid(estimates, w, total_count=total,
+                                         description=agent_name)
+            _render_frame(lines)
+            time.sleep(0.08)
+
+        # Final render
+        estimates = estimator.estimate_all(42, time.time() * 1000)
+        sys.stderr.write("\r\033[K")
+        for line in renderer.render_grid(estimates, w, total_count=total,
+                                         description=agent_name):
+            sys.stderr.write(line + "\n")
+        sys.stderr.flush()
+    finally:
+        sys.stderr.write("\033[?25h\n")
+        sys.stderr.flush()
+
+    # Summary
+    done = len(results)
+    failed = len(errors)
+    print(f"\nSwarm complete: {done} done, {failed} failed", file=sys.stderr)
+    if errors:
+        for key, err in errors.items():
+            print(f"  {key}: {err}", file=sys.stderr)
 
 
 # ── list / status ─────────────────────────────────────────────────────────
@@ -1387,6 +1617,8 @@ def main() -> None:
         cmd_cancel(args)
     elif cmd == "goal":
         cmd_goal(args)
+    elif cmd == "swarm":
+        cmd_swarm(args)
     elif cmd == "wait":
         cmd_wait(args)
     elif cmd == "list":
@@ -1404,6 +1636,7 @@ def _print_help() -> None:
     print("Commands:", file=sys.stderr)
     print("  run [--bg] [--cwd <path>] [--backend <name>] [--model <name>] [--transport cli|acp] [--system-mode append|overwrite] [--output json] <agent> <session> <prompt>", file=sys.stderr)
     print("  run [--bg] [--cwd <path>] [--output json] <session> <prompt>", file=sys.stderr)
+    print("  swarm <agent> <prefix> --template <tmpl> --items <item1> [item2...]", file=sys.stderr)
     print("  send [--prompt-file <file>] <session> [prompt]    # Add task to background session queue", file=sys.stderr)
     print("  cancel [--all | --task N | --goal] <session>          # Cancel queued tasks or goal", file=sys.stderr)
     print("  goal [--clear|--show] [--max-iterations N] [--cwd <path>] [--model <name>] <agent> <session> [goal]", file=sys.stderr)
