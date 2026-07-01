@@ -595,5 +595,54 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertIn("Unknown", guide)
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# check_acp
+# ═══════════════════════════════════════════════════════════════════════════
+
+class CheckAcpTest(unittest.TestCase):
+    def test_nonexistent_command(self):
+        from backends.utils import check_acp
+        self.assertFalse(check_acp("nonexistent-command-xyz"))
+
+    def test_mock_acp_available(self):
+        import sys, subprocess, time
+        from backends.utils import check_acp
+
+        mock_script = str(
+            Path(__file__).resolve().parent / "mock_acp_server.py"
+        )
+        if not Path(mock_script).is_file():
+            self.skipTest("mock_acp_server.py not found")
+
+        # Create a wrapper script that runs the mock server
+        wrapper = Path(tempfile.gettempdir()) / f"_acp_mock_{os.getpid()}.sh"
+        wrapper.write_text(
+            f"#!/bin/sh\nexec {sys.executable} {mock_script} --scenario simple\n"
+        )
+        wrapper.chmod(0o755)
+
+        try:
+            result = check_acp(str(wrapper))
+            self.assertTrue(result)
+        finally:
+            wrapper.unlink(missing_ok=True)
+
+    def test_kimi_acp_available(self):
+        """kimi acp initialize succeeds even though session/new requires auth."""
+        import shutil
+        from backends.utils import check_acp
+        if not shutil.which("kimi"):
+            self.skipTest("kimi not installed")
+        self.assertTrue(check_acp("kimi"))
+
+    def test_gemini_acp_available(self):
+        """gemini --acp initialize succeeds."""
+        import shutil
+        from backends.utils import check_acp
+        if not shutil.which("gemini"):
+            self.skipTest("gemini not installed")
+        self.assertTrue(check_acp(["gemini", "--acp"]))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
