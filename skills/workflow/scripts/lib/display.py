@@ -140,7 +140,7 @@ class Display:
         if not self._enabled:
             self._emit_phase_start(title)
 
-    def agent_start(self, label: str, prompt: str = "") -> None:
+    def agent_start(self, label: str, prompt: str = "", phase: str | None = None) -> None:
         with self._lock:
             # Find and activate matching pre-declared agent
             for a in self._agents:
@@ -148,14 +148,17 @@ class Display:
                     a["status"] = "running"
                     a["start_time"] = time.time()
                     a["prompt"] = prompt
+                    if phase is not None:
+                        a["phase"] = phase
                     break
             else:
-                # Find current running phase
-                phase_title = ""
-                for ph in self._phases:
-                    if ph["status"] == "running":
-                        phase_title = ph["title"]
-                        break
+                # Use explicit phase if given, otherwise find current running phase
+                phase_title = phase or ""
+                if phase_title == "":
+                    for ph in self._phases:
+                        if ph["status"] == "running":
+                            phase_title = ph["title"]
+                            break
                 self._agents.append({
                     "label": label,
                     "prompt": prompt,

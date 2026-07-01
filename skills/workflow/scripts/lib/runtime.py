@@ -165,6 +165,7 @@ def agent(
     label: str | None = None,
     model: str | None = None,
     backend: str | None = None,
+    phase: str | None = None,
 ) -> Any:
     session = _ctx.next_session()
     log_prefix = f"[{label}] " if label else ""
@@ -176,7 +177,7 @@ def agent(
         if cached is not None:
             log(f"{log_prefix}resumed (cached)")
             if _display:
-                _display.agent_start(display_label, prompt)
+                _display.agent_start(display_label, prompt, phase=phase)
                 _display.agent_skip(display_label)
             if schema:
                 try:
@@ -187,7 +188,7 @@ def agent(
 
     log(f"{log_prefix}starting...")
     if _display:
-        _display.agent_start(display_label, prompt)
+        _display.agent_start(display_label, prompt, phase=phase)
 
     t0 = time.time()
 
