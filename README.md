@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <sub><a href="README.md">English</a> · <a href="docs/readme/README.zh-CN.md">中文</a></sub>
+  <sub><a href="README.md">English</a> · <a href="docs/assets/readme/README.zh-CN.md">中文</a></sub>
 </p>
 
 ---
@@ -44,7 +44,7 @@ skit install https://github.com/vlln/subagents-skill/tree/main/skills/workflow
 
 | Skill | Description |
 |-------|-------------|
-| [subagents](skills/subagents/SKILL.md) | Dispatch tasks to named agent sessions across multiple backends. Session resume, parallel swarms, JSONL output. |
+| [subagents](skills/subagents/SKILL.md) | Dispatch tasks to named agent sessions. Session resume, background queues, goal-driven, parallel swarms, JSONL output. |
 | [workflow](skills/workflow/SKILL.md) | Multi-agent orchestration — pipeline, parallel, and phase-based workflows. Nested sub-workflows, resume, structured output. |
 
 ## Requirements
@@ -87,23 +87,23 @@ These skills follow the [Agent Skills specification](https://agentskills.io/spec
 <tr>
 <td width="50%" valign="top">
 
-### 🔗 Dynamic Workflow Orchestration
+### 🔗 Workflow Orchestration
 
 Pipeline, parallel, and nested workflows with `workflow.py`. Chain agents, split-merge, resume failed stages — compose complex multi-agent topologies declaratively.
 
 <p align="center">
-  <img src="docs/workflow.svg" alt="Workflow demo: live TTY tree rendering with phases and agents" width="100%" />
+  <img src="docs/assets/workflow.svg" alt="Workflow demo: live TTY tree rendering with phases and agents" width="100%" />
 </p>
 
 </td>
 <td width="50%" valign="top">
 
-### 🧩 Any Agent CLI as Subagent
+### 🧩 Any Agent as Subagent
 
 Wrap any CLI agent as a reusable subagent. Auto-detection picks the right backend; override with `--backend`. Extensible — add new backends in a few lines.
 
 <p align="center">
-  <img src="docs/subagents.svg" alt="Subagents demo: task queue, cwd isolation, send/cancel/status" width="100%" />
+  <img src="docs/assets/subagents.svg" alt="Subagents demo: task queue, cwd isolation, send/cancel/status" width="100%" />
 </p>
 
 </td>
@@ -113,30 +113,50 @@ Wrap any CLI agent as a reusable subagent. Auto-detection picks the right backen
 
 ### 🔁 Persistent Sessions
 
-Every run creates a named session. Resume it later and the agent remembers all prior context. Build up multi-turn conversations over days.
+Every run creates a named session. Resume it later and the agent remembers all prior context — build up multi-turn conversations over days.
 
 </td>
 <td width="50%" valign="top">
 
-### ⚡ Parallel Swarms
+### ⚡ Swarm with TUI
 
-Fan out tasks across multiple agents with `--bg`, then `subagents wait` to collect results. Run 10 reviewers against 10 files simultaneously.
+`subagents swarm` launches N agents in parallel with a real-time braille progress grid. Watch tool calls, elapsed time, and status for every agent at once.
+
+```bash
+subagents swarm reviewer rev \
+  --template "Review {{item}}" \
+  --items "src/auth.ts" "src/db.ts" "src/api.ts"
+```
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-### 📡 JSONL Output
+### 📬 Task Queue
 
-`--output json` for structured, streamable, versioned JSONL. Every event typed and timestamped — ready for piping into other tools.
+Background sessions (`--bg`) support a sequential task queue. Send more tasks with `subagents send` while the session runs — cancel individual tasks or the whole queue.
+
+```bash
+subagents run --bg reviewer s1 "analyze code"
+subagents send s1 "refactor based on analysis"
+subagents send s1 "update tests"
+subagents cancel s1 --task 2
+subagents wait s1
+```
 
 </td>
 <td width="50%" valign="top">
 
-### 🪶 Zero Dependencies
+### 🎯 Goal-Driven
 
-Python 3.10+ standard library only. No `pip install`, no `virtualenv`. Drop the scripts in and run.
+Give a high-level goal; the agent self-evaluates and stops when complete or max iterations reached. No micro-management — just the objective.
+
+```bash
+subagents goal reviewer auth-review \
+  "Refactor auth module: JWT-based, all tests pass, API docs updated"
+subagents wait auth-review
+```
 
 </td>
 </tr>
@@ -161,11 +181,20 @@ scripts/subagents run reviewer review-auth "Review src/auth.ts for security issu
 # Resume the session with more context
 scripts/subagents run reviewer review-auth "Now check the error handling"
 
-# Run 3 reviewers in parallel
+# Run 3 reviewers in parallel (legacy bg + wait)
 scripts/subagents run --bg reviewer r1 "Review src/auth.ts"
 scripts/subagents run --bg reviewer r2 "Review src/db.ts"
 scripts/subagents run --bg reviewer r3 "Review src/api.ts"
 scripts/subagents wait r1 && scripts/subagents wait r2 && scripts/subagents wait r3
+
+# Or use swarm with TUI progress grid
+scripts/subagents swarm reviewer rev \
+  --template "Review {{item}}" \
+  --items "src/auth.ts" "src/db.ts" "src/api.ts"
+
+# Goal-driven: let the agent work autonomously
+scripts/subagents goal reviewer auth-review \
+  "Refactor auth module: JWT-based, all tests pass"
 
 # List all agents and sessions
 scripts/subagents list
@@ -181,12 +210,12 @@ npm install -g console2svg
 
 # Record subagents demo (queue, cwd, send, cancel, status)
 console2svg "bash demos/subagents-demo.sh" \
-    -o docs/subagents.svg -w 100 -h 40 \
+    -o docs/assets/subagents.svg -w 100 -h 40 \
     -d macos --theme dark -v --fps 12 --timeout 25
 
 # Record workflow demo (TTY tree, phases, spinners, live updates)
 console2svg "bash demos/workflow-demo.sh" \
-    -o docs/workflow.svg -w 100 -h 36 \
+    -o docs/assets/workflow.svg -w 100 -h 36 \
     -d macos --theme dark -v --fps 12 --timeout 15
 ```
 
@@ -205,8 +234,10 @@ SKIP_INTEGRATION=0 python3 -m pytest tests/ -v
 
 | Layer | File | Count | Trigger | Time |
 |-------|------|-------|---------|------|
-| Unit | `tests/test_subagents.py` | 79 | `pytest` auto | <1s |
+| Unit | `tests/test_subagents.py` | 82 | `pytest` auto | <1s |
+| Unit | `tests/test_progress.py` | 21 | `pytest` auto | <1s |
 | Unit | `tests/test_workflow.py` | 26 | `pytest` auto | <1s |
+| Integration | `tests/test_progress_integration.py` | 6 | `pytest` auto | ~12s |
 | Integration | `tests/test_integration.py` | 8 | `SKIP_INTEGRATION=0` | ~3min |
 
 ## License
